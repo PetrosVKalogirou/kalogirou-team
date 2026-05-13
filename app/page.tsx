@@ -290,7 +290,7 @@ export default function Home() {
         <div style={darkOverlay} />
         <div style={content}>
           <h1 style={title}>Ευχαριστούμε!</h1>
-          <p style={subtitle}>Το αίτημα κράτησης στάλθηκε επιτυχώς.</p>
+          <p style={subtitle}>Το αίτημα κράτησης στάλθηκε επιτυχώς.θα επικοινωνήσουμε μαζι σας σύντομα για την επιβεβαίωση και τις λεπτομέρειες.</p>
           <button onClick={() => setPage("home")} style={mainButton}>ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ</button>
         </div>
       </section>
