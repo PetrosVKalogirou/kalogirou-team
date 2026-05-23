@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-type Page = "home" | "booking" | "details" | "success";
 type BookingDate = {
   event_date: string;
   status: "pending" | "confirmed" | string;
@@ -12,32 +11,21 @@ const SUPABASE_URL = "https://edsepuksrgfuecpmgubj.supabase.co/rest/v1";
 const SUPABASE_KEY = "sb_publishable_FqYvoviMiaR_A7Z6k_79jA_xKnYZ6FV";
 
 const services = [
-  { name: "DJing", price: 350, image: "/dj-console.jpg" },
-  { name: "Ηχητικός Εξοπλισμός (Ξεκιναει απο 300€) ", price: 300, image: "/sound-system.jpg" },
-];
-
-const effects = [
-  { name: "Φωτορυθμικά", price: 150, image: "/lights.jpg" },
-  { name: "Καπνός (Ξηρού Πάγου)", price: 150, image: "/dry-ice.jpg" },
+  { name: "DJing", price: 350, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
+  { name: "Ηχητικός Εξοπλισμός", price: 300, desc: "Επαγγελματικός ήχος για μικρές και μεγάλες εκδηλώσεις." },
+  { name: "Φωτορυθμικά", price: 150, desc: "Elegant lighting setup για ατμόσφαιρα και ένταση." },
+  { name: "Καπνός Ξηρού Πάγου", price: 150, desc: "Premium εφέ για πρώτο χορό και ξεχωριστές στιγμές." },
 ];
 
 const fountainOptions = [0, 2, 4, 6, 8, 10, 12];
 
 export default function Home() {
-  const [page, setPage] = useState<Page>("home");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [fountains, setFountains] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const [bookingDates, setBookingDates] = useState<BookingDate[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [dateMessage, setDateMessage] = useState("");
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     fetchBookingDates();
@@ -63,13 +51,12 @@ export default function Home() {
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
-
     const status = getDateStatus(date);
 
     if (status === "confirmed") {
-      setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί και δεν είναι διαθέσιμη.");
+      setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί.");
     } else if (status === "pending") {
-      setDateMessage("🟠 Για αυτή την ημερομηνία υπάρχουν ήδη εκκρεμή αιτήματα.");
+      setDateMessage("🟠 Υπάρχει ήδη εκκρεμές αίτημα για αυτή την ημερομηνία.");
     } else {
       setDateMessage("✅ Η ημερομηνία φαίνεται διαθέσιμη.");
     }
@@ -78,7 +65,7 @@ export default function Home() {
   const fountainsPrice = fountains === 0 ? 0 : fountains === 2 ? 80 : fountains * 35;
 
   const totalPrice =
-    [...services, ...effects]
+    services
       .filter((item) => selectedServices.includes(item.name))
       .reduce((sum, item) => sum + item.price, 0) + fountainsPrice;
 
@@ -90,8 +77,16 @@ export default function Home() {
 
   const changeFountains = (direction: "up" | "down") => {
     const index = fountainOptions.indexOf(fountains);
-    if (direction === "up" && index < fountainOptions.length - 1) setFountains(fountainOptions[index + 1]);
-    if (direction === "down" && index > 0) setFountains(fountainOptions[index - 1]);
+    if (direction === "up" && index < fountainOptions.length - 1) {
+      setFountains(fountainOptions[index + 1]);
+    }
+    if (direction === "down" && index > 0) {
+      setFountains(fountainOptions[index - 1]);
+    }
+  };
+
+  const scrollToBooking = () => {
+    document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const saveBookingToSupabase = async () => {
@@ -118,7 +113,14 @@ export default function Home() {
     const status = getDateStatus(selectedDate);
 
     if (status === "confirmed") {
-      alert("Αυτή η ημερομηνία έχει κλειστεί και δεν μπορεί να γίνει αποστολή.");
+      alert("Αυτή η ημερομηνία έχει κλειστεί.");
+      return;
+    }
+
+    const supabaseSaved = await saveBookingToSupabase();
+
+    if (!supabaseSaved) {
+      alert("Δεν αποθηκεύτηκε στο Supabase.");
       return;
     }
 
@@ -130,204 +132,167 @@ export default function Home() {
     formData.append("Συντριβάνια", fountains > 0 ? `${fountains} τεμάχια` : "Όχι");
     formData.append("Σύνολο", `${totalPrice}€`);
 
-    const supabaseSaved = await saveBookingToSupabase();
-
-    if (!supabaseSaved) {
-      alert("Δεν αποθηκεύτηκε η ημερομηνία στο Supabase. Πρέπει να φτιάξουμε τα Policies.");
-      return;
-    }
-
-    const response = await fetch("https://api.web3forms.com/submit", {
+    await fetch("https://api.web3forms.com/submit", {
       method: "POST",
       body: formData,
     });
 
-    const result = await response.json();
-
-    if (result.success) {
-      await fetchBookingDates();
-      setPage("success");
-    } else {
-      alert("Σφάλμα αποστολής. Δοκίμασε ξανά.");
-    }
+    await fetchBookingDates();
+    setSuccess(true);
   };
 
-  if (page === "home") {
+  if (success) {
     return (
-      <main
-        style={{
-          ...homePage,
-          backgroundImage: isMobile
-            ? "url('/kalogirou-poster-mobile.png')"
-            : "url('/kalogirou-poster.png')",
-        }}
-      >
-        <button
-          onClick={() => setPage("booking")}
-          style={{
-            ...homeButton,
-            top: isMobile ? "42%" : "46%",
-            left: isMobile ? "50%" : "38%",
-            width: isMobile ? "86%" : "auto",
-            fontSize: isMobile ? "15px" : "18px",
-            padding: isMobile ? "16px 11px" : "17px 36px",
-          }}
-        >
-          ΚΛΕΙΣΕ ΤΟ ΕΠΟΜΕΝΟ EVENT
-        </button>
+      <main style={successPage}>
+        <div style={successBox}>
+          <p style={smallGold}>KALOGIROU TEAM</p>
+          <h1 style={successTitle}>Ευχαριστούμε!</h1>
+          <p style={successText}>
+            Το αίτημα κράτησης στάλθηκε επιτυχώς. Θα επικοινωνήσουμε μαζί σας σύντομα.
+          </p>
+          <button onClick={() => setSuccess(false)} style={darkButton}>
+            ΕΠΙΣΤΡΟΦΗ
+          </button>
+        </div>
       </main>
     );
   }
 
-  if (page === "booking") {
-    return (
-      <section
-        style={{
-          ...bookingPage,
-          backgroundImage: isMobile ? "url('/booking-bg-mobile.jpg')" : "url('/booking-bg.jpg')",
-          padding: isMobile ? "80px 18px 40px" : "70px 80px",
-        }}
-      >
-        <div style={darkOverlay} />
-        <button onClick={() => setPage("home")} style={backButton}>←</button>
+  return (
+    <main style={page}>
+      <nav style={nav}>
+        <div style={logo}>KALOGIROU TEAM</div>
+        <div style={navLinks}>
+          <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} style={navButton}>Services</button>
+          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} style={navButton}>Pricing</button>
+          <button onClick={scrollToBooking} style={navCta}>Booking</button>
+        </div>
+      </nav>
 
-        <div style={content}>
-          <h1 style={{ ...title, fontSize: isMobile ? "34px" : "54px" }}>Κλείσε το event σου</h1>
-          <p style={subtitle}>Επίλεξε τις υπηρεσίες που θέλεις</p>
-
-          <h3 style={sectionTitle}>ΥΠΗΡΕΣΙΕΣ</h3>
-
-          <div style={{ ...topGrid, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-            {services.map((service) => (
-              <label key={service.name} style={wideCard}>
-                <input
-                  type="checkbox"
-                  checked={selectedServices.includes(service.name)}
-                  onChange={() => toggleService(service.name)}
-                  style={checkBox}
-                />
-                <img src={service.image} alt={service.name} style={wideImage} />
-                <div>
-                  <div style={cardName}>{service.name}</div>
-                  <div style={price}>{service.price}€</div>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <h3 style={sectionTitle}>SPECIAL EFFECTS</h3>
-
-          <div style={{ ...effectsGrid, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)" }}>
-            {effects.map((effect) => (
-              <label key={effect.name} style={effectCard}>
-                <input
-                  type="checkbox"
-                  checked={selectedServices.includes(effect.name)}
-                  onChange={() => toggleService(effect.name)}
-                  style={checkBox}
-                />
-
-                <div style={smallName}>{effect.name}</div>
-                <div style={smallPrice}>{effect.price}€</div>
-
-                <div style={photoBox}>
-                  <img src={effect.image} alt={effect.name} style={photo} />
-                </div>
-              </label>
-            ))}
-
-            <div style={effectCard}>
-              <div style={smallName}>Επιδαπέδια Συντριβάνια</div>
-
-              <div style={smallDescription}>
-                2 τεμ. = 80€<br />
-                από 4 και πάνω 35€ το τεμάχιο
-              </div>
-
-              <div style={fountainLayout}>
-                <div style={counterBox}>
-                  <button onClick={() => changeFountains("down")} style={counterButton}>−</button>
-
-                  <div style={counterMiddle}>
-                    <div style={{ fontSize: "24px", color: "#fff200", fontWeight: "900" }}>{fountains}</div>
-                    <div style={{ fontSize: "12px", color: "#ccc" }}>τεμάχια</div>
-                  </div>
-
-                  <button onClick={() => changeFountains("up")} style={counterButton}>+</button>
-                </div>
-
-                <img src="/fountains.jpg" alt="Συντριβάνια" style={fountainImage} />
-              </div>
-
-              <div style={{ ...price, marginTop: "14px", textAlign: "center" }}>
-                {fountainsPrice}€
-              </div>
-            </div>
-          </div>
-
-          <div style={totalBox}>
-            <div style={{ fontSize: isMobile ? "24px" : "30px" }}>
-              Σύνολο: <span style={{ color: "#fff200", fontWeight: "900" }}>{totalPrice}€</span>
-            </div>
-
-            <button onClick={() => setPage("details")} style={mainButton}>
-              ΣΥΝΕΧΕΙΑ ΣΤΑ ΣΤΟΙΧΕΙΑ
+      <section style={hero}>
+        <div style={heroText}>
+          <p style={smallGold}>DJ • SOUND • LIGHTING • LIVE EVENTS</p>
+          <h1 style={heroTitle}>Luxury event sound experience.</h1>
+          <p style={heroSubtitle}>
+            Μουσική, ηχητικός εξοπλισμός, φωτισμός και ειδικά εφέ για γάμους,
+            βαφτίσεις, parties, live και πανηγύρια.
+          </p>
+          <div style={heroButtons}>
+            <button onClick={scrollToBooking} style={darkButton}>ΚΛΕΙΣΕ EVENT</button>
+            <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} style={lightButton}>
+              ΔΕΣ ΥΠΗΡΕΣΙΕΣ
             </button>
           </div>
         </div>
-      </section>
-    );
-  }
 
-  if (page === "success") {
-    return (
-      <section
-        style={{
-          ...detailsPage,
-          backgroundImage: isMobile ? "url('/details-bg-mobile.jpg')" : "url('/details-bg.jpg')",
-        }}
-      >
-        <div style={darkOverlay} />
-        <div style={content}>
-          <h1 style={title}>Ευχαριστούμε!</h1>
-          <p style={subtitle}>Το αίτημα κράτησης στάλθηκε επιτυχώς.θα επικοινωνήσουμε μαζι σας σύντομα για την επιβεβαίωση και τις λεπτομέρειες.</p>
-          <button onClick={() => setPage("home")} style={mainButton}>ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ</button>
+        <div style={heroImage}>
+          <div style={imageOverlayText}>
+            <span>Weddings</span>
+            <span>Live Events</span>
+            <span>Private Parties</span>
+          </div>
         </div>
       </section>
-    );
-  }
 
-  return (
-    <section
-      style={{
-        ...detailsPage,
-        backgroundImage: isMobile ? "url('/details-bg-mobile.jpg')" : "url('/details-bg.jpg')",
-      }}
-    >
-      <div style={darkOverlay} />
-      <button onClick={() => setPage("booking")} style={backButton}>←</button>
+      <section id="services" style={section}>
+        <p style={smallGold}>WHAT WE OFFER</p>
+        <h2 style={sectionTitle}>Υπηρεσίες για κάθε στιγμή της εκδήλωσης.</h2>
 
-      <div style={{ ...content, maxWidth: "760px" }}>
-        <h1 style={{ ...title, fontSize: isMobile ? "36px" : "54px" }}>Ημερομηνία & Στοιχεία</h1>
+        <div style={servicesGrid}>
+          {services.map((service) => (
+            <button
+              key={service.name}
+              onClick={() => toggleService(service.name)}
+              style={{
+                ...serviceCard,
+                borderColor: selectedServices.includes(service.name) ? "#c6a15b" : "#eee",
+                background: selectedServices.includes(service.name) ? "#fffaf0" : "#fff",
+              }}
+            >
+              <div>
+                <h3 style={cardTitle}>{service.name}</h3>
+                <p style={cardText}>{service.desc}</p>
+              </div>
+              <strong style={cardPrice}>{service.price}€</strong>
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <p style={{ ...subtitle, color: "#fff200" }}>
-          Σύνολο: {totalPrice}€
-        </p>
+      <section style={gallerySection}>
+        <div style={galleryOne}></div>
+        <div style={galleryText}>
+          <p style={smallGold}>EVENT ATMOSPHERE</p>
+          <h2 style={sectionTitle}>Καθαρός ήχος, κομψός φωτισμός, σωστό setup.</h2>
+          <p style={paragraph}>
+            Από τον πρώτο χορό μέχρι το τελευταίο τραγούδι, ο στόχος είναι η εκδήλωση
+            να φαίνεται και να ακούγεται επαγγελματική.
+          </p>
+        </div>
+        <div style={galleryTwo}></div>
+      </section>
 
-        <form onSubmit={handleSubmit} style={formStyle}>
-          <input style={inputStyle} name="Ονοματεπώνυμο" placeholder="Ονοματεπώνυμο" required />
-          <input style={inputStyle} name="Τηλέφωνο" placeholder="Τηλέφωνο" required />
-          <input style={inputStyle} type="email" name="Email" placeholder="Email" required />
+      <section id="pricing" style={pricingSection}>
+        <div>
+          <p style={smallGold}>PRICE ESTIMATOR</p>
+          <h2 style={sectionTitle}>Υπολόγισε ενδεικτικά το κόστος.</h2>
+          <p style={paragraph}>
+            Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία.
+          </p>
+        </div>
+
+        <div style={pricePanel}>
+          <div style={summaryLine}>
+            <span>Επιλεγμένες υπηρεσίες</span>
+            <strong>{selectedServices.length}</strong>
+          </div>
+
+          <div style={fountainBox}>
+            <div>
+              <strong>Επιδαπέδια Συντριβάνια</strong>
+              <p style={miniText}>2 τεμ. = 80€ / από 4 και πάνω 35€ το τεμάχιο</p>
+            </div>
+            <div style={counter}>
+              <button onClick={() => changeFountains("down")} style={counterBtn}>−</button>
+              <span>{fountains}</span>
+              <button onClick={() => changeFountains("up")} style={counterBtn}>+</button>
+            </div>
+          </div>
+
+          <div style={totalPriceBox}>
+            <span>Σύνολο</span>
+            <strong>{totalPrice}€</strong>
+          </div>
+
+          <button onClick={scrollToBooking} style={{ ...darkButton, width: "100%" }}>
+            ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
+          </button>
+        </div>
+      </section>
+
+      <section id="booking" style={bookingSection}>
+        <div style={bookingIntro}>
+          <p style={smallGold}>BOOK YOUR DATE</p>
+          <h2 style={sectionTitle}>Στείλε αίτημα κράτησης.</h2>
+          <p style={paragraph}>
+            Διάλεξε ημερομηνία και στείλε τα στοιχεία σου. Οι πορτοκαλί ημερομηνίες έχουν ήδη εκκρεμές αίτημα.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={form}>
+          <input style={input} name="Ονοματεπώνυμο" placeholder="Ονοματεπώνυμο" required />
+          <input style={input} name="Τηλέφωνο" placeholder="Τηλέφωνο" required />
+          <input style={input} type="email" name="Email" placeholder="Email" required />
 
           <input
             style={{
-              ...inputStyle,
-              border:
+              ...input,
+              borderColor:
                 getDateStatus(selectedDate) === "confirmed"
-                  ? "2px solid red"
+                  ? "red"
                   : getDateStatus(selectedDate) === "pending"
-                  ? "2px solid orange"
-                  : "1px solid rgba(255,255,255,0.5)",
+                  ? "orange"
+                  : "#ddd",
             }}
             type="date"
             value={selectedDate}
@@ -335,321 +300,410 @@ export default function Home() {
             required
           />
 
-          {dateMessage && (
-            <div
-              style={{
-                padding: "14px",
-                borderRadius: "8px",
-                background:
-                  getDateStatus(selectedDate) === "confirmed"
-                    ? "rgba(255,0,0,0.18)"
-                    : getDateStatus(selectedDate) === "pending"
-                    ? "rgba(255,165,0,0.18)"
-                    : "rgba(0,255,0,0.12)",
-                color: "white",
-                fontWeight: "800",
-              }}
-            >
-              {dateMessage}
-            </div>
-          )}
+          {dateMessage && <div style={dateNotice}>{dateMessage}</div>}
 
-          <input style={inputStyle} name="Τοποθεσία" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
+          <input style={input} name="Τοποθεσία" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
 
-          <select style={inputStyle} name="Τύπος εκδήλωσης" required defaultValue="">
+          <select style={input} name="Τύπος εκδήλωσης" required defaultValue="">
             <option value="" disabled>Τύπος εκδήλωσης</option>
             <option>Γάμος</option>
             <option>Βάπτιση</option>
             <option>Party</option>
             <option>Corporate Event</option>
             <option>Live Event</option>
+            <option>Πανηγύρι</option>
             <option>Άλλο</option>
           </select>
 
-          <button type="submit" style={{ ...mainButton, width: "100%" }}>
+          <div style={bookingTotal}>
+            <span>Σύνολο επιλογών</span>
+            <strong>{totalPrice}€</strong>
+          </div>
+
+          <button type="submit" style={{ ...darkButton, width: "100%" }}>
             ΑΠΟΣΤΟΛΗ ΑΙΤΗΜΑΤΟΣ
           </button>
         </form>
+      </section>
 
-        <p style={{ color: "#aaa", fontSize: "14px", marginTop: "20px" }}>
-          🔒 Τα στοιχεία σας χρησιμοποιούνται μόνο για επικοινωνία σχετικά με την κράτησή σας.
-        </p>
-      </div>
-    </section>
+      <footer style={footer}>
+        <strong>KALOGIROU TEAM</strong>
+        <span>DJ • Sound • Lighting • Events</span>
+      </footer>
+    </main>
   );
 }
 
-const homePage = {
-  minHeight: "100vh",
-  width: "100vw",
-  backgroundColor: "#000",
-  backgroundSize: "contain",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  position: "relative" as const,
-  overflow: "hidden",
+const page = {
+  background: "#faf8f3",
+  color: "#171717",
+  fontFamily: "Arial, Helvetica, sans-serif",
 };
 
-const bookingPage = {
-  minHeight: "100vh",
-  width: "100vw",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  position: "relative" as const,
-  color: "white",
-  boxSizing: "border-box" as const,
-};
-
-const detailsPage = {
-  minHeight: "100vh",
-  width: "100vw",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  position: "relative" as const,
-  color: "white",
-  padding: "80px 20px",
-  boxSizing: "border-box" as const,
-  textAlign: "center" as const,
-};
-
-const darkOverlay = {
-  position: "absolute" as const,
-  inset: 0,
-  background: "rgba(0,0,0,0.72)",
-  zIndex: 0,
-};
-
-const content = {
-  position: "relative" as const,
-  zIndex: 1,
-  margin: "0 auto",
-  maxWidth: "1100px",
-  textAlign: "center" as const,
-};
-
-const title = {
-  fontSize: "54px",
-  fontWeight: "900",
-  margin: "0 0 10px",
-  color: "white",
-};
-
-const subtitle = {
-  fontSize: "22px",
-  color: "#ccc",
-  marginBottom: "50px",
-};
-
-const sectionTitle = {
-  color: "#fff200",
-  fontSize: "24px",
-  fontWeight: "900",
-  textAlign: "left" as const,
-  margin: "35px 0 16px",
-};
-
-const topGrid = {
-  display: "grid",
-  gap: "34px",
-  marginBottom: "35px",
-};
-
-const effectsGrid = {
-  display: "grid",
-  gap: "28px",
-};
-
-const wideCard = {
-  minHeight: "155px",
-  border: "2px solid #fff200",
-  borderRadius: "18px",
-  background: "rgba(0,0,0,0.72)",
+const nav = {
+  position: "fixed" as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  height: "72px",
+  background: "rgba(250,248,243,0.85)",
+  backdropFilter: "blur(18px)",
+  zIndex: 50,
   display: "flex",
   alignItems: "center",
-  gap: "28px",
-  padding: "22px",
+  justifyContent: "space-between",
+  padding: "0 7vw",
+  borderBottom: "1px solid rgba(0,0,0,0.06)",
+};
+
+const logo = {
+  fontWeight: 900,
+  letterSpacing: "2px",
+};
+
+const navLinks = {
+  display: "flex",
+  gap: "10px",
+  alignItems: "center",
+};
+
+const navButton = {
+  border: "none",
+  background: "transparent",
+  fontWeight: 700,
   cursor: "pointer",
-  position: "relative" as const,
-  boxShadow: "0 0 25px rgba(255,242,0,0.12)",
 };
 
-const effectCard = {
-  border: "2px solid #fff200",
-  borderRadius: "18px",
-  background: "rgba(0,0,0,0.76)",
-  padding: "22px",
+const navCta = {
+  border: "none",
+  background: "#171717",
+  color: "white",
+  padding: "11px 18px",
+  borderRadius: "999px",
+  fontWeight: 800,
   cursor: "pointer",
-  minHeight: "300px",
-  position: "relative" as const,
-  boxShadow: "0 0 25px rgba(255,242,0,0.12)",
-  textAlign: "left" as const,
 };
 
-const checkBox = {
-  width: "24px",
-  height: "24px",
-  accentColor: "#fff200",
+const hero = {
+  minHeight: "100vh",
+  display: "grid",
+  gridTemplateColumns: "1.05fr 0.95fr",
+  gap: "5vw",
+  alignItems: "center",
+  padding: "110px 7vw 60px",
+  boxSizing: "border-box" as const,
 };
 
-const wideImage = {
-  width: "190px",
-  height: "115px",
-  objectFit: "contain" as const,
+const heroText = {
+  maxWidth: "680px",
 };
 
-const cardName = {
-  fontSize: "24px",
-  fontWeight: "900",
-};
-
-const price = {
-  fontSize: "25px",
-  fontWeight: "900",
-  color: "#fff200",
-  marginTop: "8px",
-};
-
-const smallName = {
-  fontSize: "20px",
-  fontWeight: "900",
-  marginBottom: "8px",
-};
-
-const smallPrice = {
-  fontSize: "20px",
-  fontWeight: "900",
-  color: "#fff200",
+const smallGold = {
+  color: "#a77a2d",
+  fontWeight: 900,
+  letterSpacing: "2px",
+  fontSize: "13px",
   marginBottom: "16px",
 };
 
-const smallDescription = {
-  fontSize: "13px",
-  color: "#ddd",
-  lineHeight: "1.45",
-  marginBottom: "18px",
+const heroTitle = {
+  fontSize: "clamp(48px, 7vw, 96px)",
+  lineHeight: "0.95",
+  margin: "0 0 24px",
+  letterSpacing: "-4px",
 };
 
-const photoBox = {
-  marginTop: "12px",
-  width: "100%",
-  height: "150px",
-  borderRadius: "10px",
-  overflow: "hidden",
-  background: "rgba(255,255,255,0.04)",
+const heroSubtitle = {
+  fontSize: "20px",
+  lineHeight: "1.65",
+  color: "#555",
+  maxWidth: "610px",
 };
 
-const photo = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover" as const,
-};
-
-const fountainLayout = {
-  display: "grid",
-  gridTemplateColumns: "1fr 120px",
-  gap: "14px",
-  alignItems: "center",
-};
-
-const fountainImage = {
-  width: "120px",
-  height: "145px",
-  objectFit: "cover" as const,
-  borderRadius: "10px",
-};
-
-const counterBox = {
+const heroButtons = {
   display: "flex",
-  alignItems: "center",
+  gap: "14px",
+  marginTop: "34px",
+  flexWrap: "wrap" as const,
+};
+
+const darkButton = {
+  background: "#171717",
+  color: "white",
+  border: "none",
+  padding: "16px 28px",
+  borderRadius: "999px",
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 18px 35px rgba(0,0,0,0.18)",
+};
+
+const lightButton = {
+  background: "white",
+  color: "#171717",
+  border: "1px solid #ddd",
+  padding: "16px 28px",
+  borderRadius: "999px",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const heroImage = {
+  height: "72vh",
+  minHeight: "520px",
+  borderRadius: "36px",
+  backgroundImage:
+    "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.45)), url('/booking-bg.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  position: "relative" as const,
+  boxShadow: "0 30px 80px rgba(0,0,0,0.22)",
+};
+
+const imageOverlayText = {
+  position: "absolute" as const,
+  bottom: "28px",
+  left: "28px",
+  right: "28px",
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "10px",
+  color: "white",
+  fontWeight: 800,
+  fontSize: "14px",
+};
+
+const section = {
+  padding: "90px 7vw",
+};
+
+const sectionTitle = {
+  fontSize: "clamp(34px, 5vw, 62px)",
+  letterSpacing: "-2px",
+  lineHeight: "1.05",
+  margin: "0 0 30px",
+};
+
+const servicesGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+  gap: "18px",
+};
+
+const serviceCard = {
+  minHeight: "230px",
+  border: "1px solid #eee",
+  borderRadius: "28px",
+  padding: "28px",
+  textAlign: "left" as const,
+  display: "flex",
+  flexDirection: "column" as const,
+  justifyContent: "space-between",
+  cursor: "pointer",
+  transition: "0.2s",
+};
+
+const cardTitle = {
+  fontSize: "24px",
+  margin: "0 0 12px",
+};
+
+const cardText = {
+  color: "#666",
+  lineHeight: "1.55",
+};
+
+const cardPrice = {
+  fontSize: "28px",
+  color: "#a77a2d",
+};
+
+const gallerySection = {
+  padding: "40px 7vw 100px",
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr 1fr",
+  gap: "22px",
+  alignItems: "stretch",
+};
+
+const galleryOne = {
+  minHeight: "460px",
+  borderRadius: "34px",
+  backgroundImage: "url('/details-bg.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+};
+
+const galleryTwo = {
+  minHeight: "460px",
+  borderRadius: "34px",
+  backgroundImage: "url('/dj-console.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+};
+
+const galleryText = {
+  background: "#171717",
+  color: "white",
+  borderRadius: "34px",
+  padding: "36px",
+  display: "flex",
+  flexDirection: "column" as const,
   justifyContent: "center",
 };
 
-const counterButton = {
-  width: "46px",
-  height: "54px",
-  border: "1px solid #fff200",
-  background: "rgba(0,0,0,0.7)",
-  color: "#fff200",
-  fontSize: "24px",
-  cursor: "pointer",
+const paragraph = {
+  color: "#666",
+  fontSize: "18px",
+  lineHeight: "1.7",
 };
 
-const counterMiddle = {
-  width: "70px",
-  height: "54px",
-  borderTop: "1px solid #fff200",
-  borderBottom: "1px solid #fff200",
+const pricingSection = {
+  padding: "100px 7vw",
   display: "grid",
-  placeItems: "center",
-  background: "rgba(0,0,0,0.5)",
-  textAlign: "center" as const,
+  gridTemplateColumns: "1fr 440px",
+  gap: "50px",
+  alignItems: "center",
+  background: "white",
 };
 
-const totalBox = {
-  margin: "35px auto 0",
-  maxWidth: "700px",
-  border: "2px solid #fff200",
-  borderRadius: "18px",
-  background: "rgba(0,0,0,0.75)",
-  padding: "24px",
-  textAlign: "center" as const,
+const pricePanel = {
+  background: "#faf8f3",
+  border: "1px solid #eee",
+  borderRadius: "34px",
+  padding: "30px",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
 };
 
-const mainButton = {
-  marginTop: "22px",
-  background: "linear-gradient(90deg, #ffdd00, #fff200)",
-  color: "black",
-  border: "none",
-  padding: "18px 34px",
-  borderRadius: "12px",
-  fontWeight: "900",
-  fontSize: "16px",
-  cursor: "pointer",
-  boxShadow: "0 0 25px rgba(255,242,0,0.35)",
+const summaryLine = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "18px 0",
+  borderBottom: "1px solid #e8e2d8",
 };
 
-const homeButton = {
-  position: "absolute" as const,
-  transform: "translate(-50%, -50%)",
-  backgroundColor: "#fff200",
-  color: "black",
-  borderRadius: "14px",
-  fontWeight: "900",
-  boxShadow: "0 0 25px rgb(246, 255, 0)",
-  border: "none",
-  cursor: "pointer",
+const fountainBox = {
+  display: "grid",
+  gap: "18px",
+  padding: "24px 0",
 };
 
-const backButton = {
-  position: "fixed" as const,
-  top: "24px",
-  left: "24px",
-  backgroundColor: "rgba(0,0,0,0.5)",
-  color: "#fff200",
-  border: "2px solid #fff200",
+const miniText = {
+  color: "#777",
+  margin: "8px 0 0",
+};
+
+const counter = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  background: "white",
+  borderRadius: "999px",
+  padding: "10px",
+  fontWeight: 900,
+};
+
+const counterBtn = {
+  width: "42px",
+  height: "42px",
   borderRadius: "50%",
-  width: "52px",
-  height: "52px",
-  fontSize: "28px",
-  fontWeight: "900",
+  border: "none",
+  background: "#171717",
+  color: "white",
+  fontSize: "22px",
   cursor: "pointer",
-  zIndex: 10,
 };
 
-const formStyle = {
+const totalPriceBox = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  fontSize: "26px",
+  fontWeight: 900,
+  padding: "24px 0",
+};
+
+const bookingSection = {
+  padding: "110px 7vw",
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "60px",
+  alignItems: "start",
+};
+
+const bookingIntro = {
+  position: "sticky" as const,
+  top: "110px",
+};
+
+const form = {
+  background: "white",
+  borderRadius: "34px",
+  padding: "32px",
   display: "grid",
   gap: "14px",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
 };
 
-const inputStyle = {
+const input = {
   width: "100%",
-  padding: "17px 20px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.5)",
-  background: "rgba(0,0,0,0.62)",
-  color: "white",
+  padding: "17px 18px",
+  borderRadius: "16px",
+  border: "1px solid #ddd",
+  background: "#fafafa",
+  color: "#171717",
   fontSize: "16px",
   boxSizing: "border-box" as const,
+};
+
+const dateNotice = {
+  padding: "14px",
+  borderRadius: "16px",
+  background: "#faf8f3",
+  fontWeight: 800,
+};
+
+const bookingTotal = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "18px 0",
+  fontSize: "20px",
+  fontWeight: 900,
+};
+
+const footer = {
+  padding: "45px 7vw",
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "20px",
+  borderTop: "1px solid #e8e2d8",
+  color: "#555",
+};
+
+const successPage = {
+  minHeight: "100vh",
+  display: "grid",
+  placeItems: "center",
+  background: "#faf8f3",
+  padding: "30px",
+};
+
+const successBox = {
+  maxWidth: "620px",
+  background: "white",
+  borderRadius: "34px",
+  padding: "50px",
+  textAlign: "center" as const,
+  boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
+};
+
+const successTitle = {
+  fontSize: "58px",
+  margin: "0 0 18px",
+};
+
+const successText = {
+  color: "#666",
+  fontSize: "20px",
+  lineHeight: "1.6",
 };
