@@ -10,6 +10,11 @@ type BookingDate = {
 const SUPABASE_URL = "https://edsepuksrgfuecpmgubj.supabase.co/rest/v1";
 const SUPABASE_KEY = "sb_publishable_FqYvoviMiaR_A7Z6k_79jA_xKnYZ6FV";
 
+const INSTAGRAM_URL =
+  "https://www.instagram.com/djvasilis_kalogirou?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
+const FACEBOOK_URL = "https://www.facebook.com/djkalogirou";
+const PHONE = "6984249876";
+
 const services = [
   { name: "DJing", price: 350, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
   { name: "Ηχητικός Εξοπλισμός", price: 300, desc: "Επαγγελματικός ήχος για μικρές και μεγάλες εκδηλώσεις." },
@@ -116,9 +121,10 @@ export default function Home() {
     formData.append("access_key", "89ec85a7-a56b-4940-885d-55d02282101b");
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
     formData.append("Event date", selectedDate);
-formData.append("Selected services", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
-formData.append("Fountains", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
-formData.append("Total price", `${totalPrice}€`);
+    formData.append("Selected services", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
+    formData.append("Fountains", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
+    formData.append("Total price", `${totalPrice}€`);
+
     try {
       await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -147,7 +153,6 @@ formData.append("Total price", `${totalPrice}€`);
     setIsSubmitting(true);
 
     const form = e.currentTarget;
-
     const supabaseSaved = await saveBookingToSupabase();
 
     if (!supabaseSaved) {
@@ -209,6 +214,7 @@ formData.append("Total price", `${totalPrice}€`);
             Μουσική, ηχητικός εξοπλισμός, φωτισμός και ειδικά εφέ για γάμους,
             βαφτίσεις, parties, live και πανηγύρια.
           </p>
+
           <div className="heroButtons">
             <button onClick={scrollToBooking} className="darkBtn">
               ΚΛΕΙΣΕ EVENT
@@ -219,6 +225,19 @@ formData.append("Total price", `${totalPrice}€`);
             >
               ΔΕΣ ΥΠΗΡΕΣΙΕΣ
             </button>
+          </div>
+
+          <div className="socialRow">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="socialBtn">
+              Instagram
+            </a>
+            <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" className="socialBtn">
+              Facebook
+            </a>
+            <span className="phoneText">Τηλ. {PHONE}</span>
+            <a href={`tel:${PHONE}`} className="callMobile">
+              Κλήση τώρα
+            </a>
           </div>
         </div>
 
@@ -292,13 +311,9 @@ formData.append("Total price", `${totalPrice}€`);
             </div>
 
             <div className="counter">
-              <button type="button" onClick={() => changeFountains("down")}>
-                −
-              </button>
+              <button type="button" onClick={() => changeFountains("down")}>−</button>
               <span>{fountains}</span>
-              <button type="button" onClick={() => changeFountains("up")}>
-                +
-              </button>
+              <button type="button" onClick={() => changeFountains("up")}>+</button>
             </div>
 
             <div className="fountainPrice">
@@ -355,9 +370,7 @@ formData.append("Total price", `${totalPrice}€`);
           <input name="Location" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
 
           <select name="Event type" required defaultValue="">
-            <option value="" disabled>
-              Τύπος εκδήλωσης
-            </option>
+            <option value="" disabled>Τύπος εκδήλωσης</option>
             <option>Γάμος</option>
             <option>Βάπτιση</option>
             <option>Party</option>
@@ -409,6 +422,7 @@ formData.append("Total price", `${totalPrice}€`);
       <footer>
         <strong>KALOGIROU TEAM</strong>
         <span>DJ • Sound • Lighting • Events</span>
+        <span>Τηλ. {PHONE}</span>
       </footer>
 
       <Styles />
@@ -559,6 +573,33 @@ function Styles() {
 
       .full {
         width: 100%;
+      }
+
+      .socialRow {
+        margin-top: 22px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .socialBtn,
+      .callMobile,
+      .phoneText {
+        text-decoration: none;
+        border: 1px solid rgb(221, 221, 221);
+        background: white;
+        color: rgb(23, 23, 23);
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 14px;
+      }
+
+      .callMobile {
+        display: none;
+        background: rgb(23, 23, 23);
+        color: white;
       }
 
       .heroImage {
@@ -836,6 +877,7 @@ function Styles() {
         gap: 20px;
         border-top: 1px solid rgb(232, 226, 216);
         color: rgb(85, 85, 85);
+        flex-wrap: wrap;
       }
 
       .successPage {
@@ -906,15 +948,23 @@ function Styles() {
           font-size: 16px;
         }
 
-        .heroButtons {
+        .heroButtons,
+        .socialRow {
           display: grid;
           grid-template-columns: 1fr;
         }
 
         .darkBtn,
-        .lightBtn {
+        .lightBtn,
+        .socialBtn,
+        .callMobile,
+        .phoneText {
           width: 100%;
-          padding: 15px 20px;
+          text-align: center;
+        }
+
+        .callMobile {
+          display: block;
         }
 
         .heroImage {
