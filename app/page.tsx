@@ -304,7 +304,7 @@ export default function Home() {
             <option>Γάμος</option>
             <option>Βάπτιση</option>
             <option>Party</option>
-            <option>Corporate Event</option>
+            <option>Γάμος & Βάπτιση</option>
             <option>Live Event</option>
             <option>Πανηγύρι</option>
             <option>Άλλο</option>
