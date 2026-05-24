@@ -115,11 +115,10 @@ export default function Home() {
 
     formData.append("access_key", "89ec85a7-a56b-4940-885d-55d02282101b");
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
-    formData.append("Ημερομηνία", selectedDate);
-    formData.append("Υπηρεσίες", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
-    formData.append("Συντριβάνια", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
-    formData.append("Σύνολο", `${totalPrice}€`);
-
+    formData.append("Event date", selectedDate);
+formData.append("Selected services", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
+formData.append("Fountains", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
+formData.append("Total price", `${totalPrice}€`);
     try {
       await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -333,8 +332,8 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit} className="form">
-          <input name="Ονοματεπώνυμο" placeholder="Ονοματεπώνυμο" required />
-          <input name="Τηλέφωνο" placeholder="Τηλέφωνο" required />
+          <input name="Full name" placeholder="Ονοματεπώνυμο" required />
+          <input name="Phone" placeholder="Τηλέφωνο" required />
           <input type="email" name="Email" placeholder="Email" required />
 
           <input
@@ -353,9 +352,9 @@ export default function Home() {
 
           {dateMessage && <div className="dateNotice">{dateMessage}</div>}
 
-          <input name="Τοποθεσία" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
+          <input name="Location" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
 
-          <select name="Τύπος εκδήλωσης" required defaultValue="">
+          <select name="Event type" required defaultValue="">
             <option value="" disabled>
               Τύπος εκδήλωσης
             </option>
@@ -368,9 +367,9 @@ export default function Home() {
             <option>Άλλο</option>
           </select>
 
-          <input name="Αριθμός καλεσμένων" placeholder="Αριθμός καλεσμένων (προαιρετικό)" />
+          <input name="Guests" placeholder="Αριθμός καλεσμένων (προαιρετικό)" />
 
-          <select name="Χώρος εκδήλωσης" defaultValue="">
+          <select name="Venue" defaultValue="">
             <option value="">Χώρος εκδήλωσης (προαιρετικό)</option>
             <option>Εσωτερικός χώρος</option>
             <option>Εξωτερικός χώρος</option>
@@ -378,7 +377,7 @@ export default function Home() {
             <option>Δεν γνωρίζω ακόμα</option>
           </select>
 
-          <select name="Budget / Προσφορά" defaultValue="">
+          <select name="Budget" defaultValue="">
             <option value="">Τι προσφορά ψάχνετε; (προαιρετικό)</option>
             <option>Θέλω κάτι πιο οικονομικό</option>
             <option>Θέλω ισορροπία τιμής και ποιότητας</option>
@@ -387,7 +386,7 @@ export default function Home() {
           </select>
 
           <textarea
-            name="Πρόσθετες πληροφορίες"
+            name="Notes"
             placeholder="Προαιρετικά: γράψτε πληροφορίες που βοηθούν για καλύτερη και οικονομικότερη προσφορά. Π.χ. αριθμός ατόμων, μέγεθος χώρου, αν θέλετε κάτι πιο απλό ή πιο premium, ειδικές απαιτήσεις."
             rows={6}
           />
