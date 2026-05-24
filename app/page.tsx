@@ -226,6 +226,9 @@ export default function Home() {
           <p>
             Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία.
           </p>
+          <p className="priceNote">
+            Η τιμή είναι ενδεικτική. Αν ο χώρος είναι μικρός ή χρειάζεστε πιο οικονομική λύση, γράψτε το στο αίτημα και θα σας προτείνουμε καλύτερη προσφορά.
+          </p>
         </div>
 
         <div className="pricePanel">
@@ -241,9 +244,9 @@ export default function Home() {
             </div>
 
             <div className="counter">
-              <button onClick={() => changeFountains("down")}>−</button>
+              <button type="button" onClick={() => changeFountains("down")}>−</button>
               <span>{fountains}</span>
-              <button onClick={() => changeFountains("up")}>+</button>
+              <button type="button" onClick={() => changeFountains("up")}>+</button>
             </div>
 
             <div className="fountainPrice">
@@ -267,6 +270,9 @@ export default function Home() {
           <h2>Στείλε αίτημα κράτησης.</h2>
           <p>
             Διάλεξε ημερομηνία και στείλε τα στοιχεία σου. Οι πορτοκαλί ημερομηνίες έχουν ήδη εκκρεμές αίτημα.
+          </p>
+          <p className="priceNote">
+            Τα προαιρετικά στοιχεία βοηθούν να σας προτείνουμε πιο σωστή και οικονομική προσφορά.
           </p>
         </div>
 
@@ -304,6 +310,34 @@ export default function Home() {
             <option>Άλλο</option>
           </select>
 
+          <input name="Αριθμός καλεσμένων" placeholder="Αριθμός καλεσμένων (προαιρετικό)" />
+
+          <select name="Χώρος εκδήλωσης" defaultValue="">
+            <option value="">Χώρος εκδήλωσης (προαιρετικό)</option>
+            <option>Εσωτερικός χώρος</option>
+            <option>Εξωτερικός χώρος</option>
+            <option>Και τα δύο</option>
+            <option>Δεν γνωρίζω ακόμα</option>
+          </select>
+
+          <select name="Budget / Προσφορά" defaultValue="">
+            <option value="">Τι προσφορά ψάχνετε; (προαιρετικό)</option>
+            <option>Θέλω κάτι πιο οικονομικό</option>
+            <option>Θέλω ισορροπία τιμής και ποιότητας</option>
+            <option>Θέλω premium setup</option>
+            <option>Δεν γνωρίζω, θέλω πρόταση</option>
+          </select>
+
+          <textarea
+            name="Πρόσθετες πληροφορίες"
+            placeholder="Προαιρετικά: γράψτε πληροφορίες που βοηθούν για καλύτερη και οικονομικότερη προσφορά. Π.χ. αριθμός ατόμων, μέγεθος χώρου, αν θέλετε κάτι πιο απλό ή πιο premium, ειδικές απαιτήσεις."
+            rows={6}
+          />
+
+          <p className="helpText">
+            Αυτά τα πεδία είναι προαιρετικά, αλλά βοηθούν να σας προτείνουμε την καλύτερη και πιο οικονομική λύση.
+          </p>
+
           <div className="bookingTotal">
             <span>Σύνολο επιλογών</span>
             <strong>{totalPrice}€</strong>
@@ -335,12 +369,13 @@ function Styles() {
         margin: 0;
         padding: 0;
         overflow-x: hidden;
-        background: #faf8f3;
+        background: rgb(250, 248, 243);
       }
 
       button,
       input,
-      select {
+      select,
+      textarea {
         font-family: inherit;
       }
 
@@ -348,8 +383,8 @@ function Styles() {
         width: 100%;
         max-width: 100vw;
         overflow-x: hidden;
-        background: #faf8f3;
-        color: #171717;
+        background: rgb(250, 248, 243);
+        color: rgb(23, 23, 23);
         font-family: Arial, Helvetica, sans-serif;
       }
 
@@ -390,7 +425,7 @@ function Styles() {
       }
 
       .navLinks .navCta {
-        background: #171717;
+        background: rgb(23, 23, 23);
         color: white;
         padding: 11px 18px;
         border-radius: 999px;
@@ -406,7 +441,7 @@ function Styles() {
       }
 
       .eyebrow {
-        color: #a77a2d;
+        color: rgb(167, 122, 45);
         font-weight: 900;
         letter-spacing: 2px;
         font-size: 13px;
@@ -426,7 +461,7 @@ function Styles() {
       .galleryText p {
         font-size: 18px;
         line-height: 1.7;
-        color: #666;
+        color: rgb(102, 102, 102);
       }
 
       .heroButtons {
@@ -447,15 +482,15 @@ function Styles() {
       }
 
       .darkBtn {
-        background: #171717;
+        background: rgb(23, 23, 23);
         color: white;
         box-shadow: 0 18px 35px rgba(0, 0, 0, 0.18);
       }
 
       .lightBtn {
         background: white;
-        color: #171717;
-        border: 1px solid #ddd;
+        color: rgb(23, 23, 23);
+        border: 1px solid rgb(221, 221, 221);
       }
 
       .full {
@@ -510,7 +545,7 @@ function Styles() {
 
       .serviceCard {
         min-height: 230px;
-        border: 1px solid #eee;
+        border: 1px solid rgb(238, 238, 238);
         border-radius: 28px;
         padding: 28px;
         text-align: left;
@@ -523,8 +558,8 @@ function Styles() {
       }
 
       .serviceCard.active {
-        border-color: #c6a15b;
-        background: #fffaf0;
+        border-color: rgb(198, 161, 91);
+        background: rgb(255, 250, 240);
       }
 
       .serviceCard h3 {
@@ -533,13 +568,13 @@ function Styles() {
       }
 
       .serviceCard p {
-        color: #666;
+        color: rgb(102, 102, 102);
         line-height: 1.55;
       }
 
       .serviceCard strong {
         font-size: 28px;
-        color: #a77a2d;
+        color: rgb(167, 122, 45);
       }
 
       .gallery {
@@ -565,7 +600,7 @@ function Styles() {
       }
 
       .galleryText {
-        background: #171717;
+        background: rgb(23, 23, 23);
         color: white;
         border-radius: 34px;
         padding: 36px;
@@ -575,7 +610,7 @@ function Styles() {
       }
 
       .galleryText p {
-        color: #d5d5d5;
+        color: rgb(213, 213, 213);
       }
 
       .pricing {
@@ -586,9 +621,17 @@ function Styles() {
         background: white;
       }
 
+      .priceNote {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 20px;
+        background: rgb(250, 248, 243);
+        font-weight: 700;
+      }
+
       .pricePanel {
-        background: #faf8f3;
-        border: 1px solid #eee;
+        background: rgb(250, 248, 243);
+        border: 1px solid rgb(238, 238, 238);
         border-radius: 34px;
         padding: 30px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.08);
@@ -605,18 +648,18 @@ function Styles() {
 
       .line {
         padding: 18px 0;
-        border-bottom: 1px solid #e8e2d8;
+        border-bottom: 1px solid rgb(232, 226, 216);
       }
 
       .fountainBox {
         display: grid;
         gap: 18px;
         padding: 24px 0;
-        border-bottom: 1px solid #e8e2d8;
+        border-bottom: 1px solid rgb(232, 226, 216);
       }
 
       .fountainBox p {
-        color: #777;
+        color: rgb(119, 119, 119);
         margin: 8px 0 0;
         font-size: 14px;
       }
@@ -636,7 +679,7 @@ function Styles() {
         height: 42px;
         border-radius: 50%;
         border: none;
-        background: #171717;
+        background: rgb(23, 23, 23);
         color: white;
         font-size: 22px;
         cursor: pointer;
@@ -677,14 +720,28 @@ function Styles() {
       }
 
       .form input,
-      .form select {
+      .form select,
+      .form textarea {
         width: 100%;
         padding: 17px 18px;
         border-radius: 16px;
-        border: 1px solid #ddd;
-        background: #fafafa;
-        color: #171717;
+        border: 1px solid rgb(221, 221, 221);
+        background: rgb(250, 250, 250);
+        color: rgb(23, 23, 23);
         font-size: 16px;
+      }
+
+      .form textarea {
+        resize: vertical;
+        min-height: 150px;
+        line-height: 1.6;
+      }
+
+      .helpText {
+        margin: 0;
+        color: rgb(119, 119, 119);
+        font-size: 14px;
+        line-height: 1.5;
       }
 
       .form .date.red {
@@ -698,7 +755,7 @@ function Styles() {
       .dateNotice {
         padding: 14px;
         border-radius: 16px;
-        background: #faf8f3;
+        background: rgb(250, 248, 243);
         font-weight: 800;
       }
 
@@ -713,15 +770,15 @@ function Styles() {
         display: flex;
         justify-content: space-between;
         gap: 20px;
-        border-top: 1px solid #e8e2d8;
-        color: #555;
+        border-top: 1px solid rgb(232, 226, 216);
+        color: rgb(85, 85, 85);
       }
 
       .successPage {
         min-height: 100vh;
         display: grid;
         place-items: center;
-        background: #faf8f3;
+        background: rgb(250, 248, 243);
         padding: 30px;
         font-family: Arial, Helvetica, sans-serif;
       }
@@ -741,7 +798,7 @@ function Styles() {
       }
 
       .successBox p {
-        color: #666;
+        color: rgb(102, 102, 102);
         font-size: 20px;
         line-height: 1.6;
       }
