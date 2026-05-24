@@ -53,9 +53,13 @@ export default function Home() {
     setSelectedDate(date);
     const status = getDateStatus(date);
 
-    if (status === "confirmed") setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί.");
-    else if (status === "pending") setDateMessage("🟠 Υπάρχει ήδη εκκρεμές αίτημα για αυτή την ημερομηνία.");
-    else setDateMessage("✅ Η ημερομηνία φαίνεται διαθέσιμη.");
+    if (status === "confirmed") {
+      setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί.");
+    } else if (status === "pending") {
+      setDateMessage("🟠 Υπάρχει ήδη εκκρεμές αίτημα για αυτή την ημερομηνία.");
+    } else {
+      setDateMessage("✅ Η ημερομηνία φαίνεται διαθέσιμη.");
+    }
   };
 
   const fountainsPrice = fountains === 0 ? 0 : fountains === 2 ? 80 : fountains * 35;
@@ -73,9 +77,11 @@ export default function Home() {
 
   const changeFountains = (direction: "up" | "down") => {
     const index = fountainOptions.indexOf(fountains);
+
     if (direction === "up" && index < fountainOptions.length - 1) {
       setFountains(fountainOptions[index + 1]);
     }
+
     if (direction === "down" && index > 0) {
       setFountains(fountainOptions[index - 1]);
     }
@@ -114,7 +120,7 @@ export default function Home() {
     const supabaseSaved = await saveBookingToSupabase();
 
     if (!supabaseSaved) {
-      alert("Δεν αποθηκεύτηκε στο Supabase.");
+      alert("Δεν αποθηκεύτηκε η ημερομηνία. Δοκίμασε ξανά.");
       return;
     }
 
@@ -122,17 +128,24 @@ export default function Home() {
     formData.append("access_key", "89ec85a7-a56b-4940-885d-55d02282101b");
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
     formData.append("Ημερομηνία", selectedDate);
-    formData.append("Υπηρεσίες", selectedServices.join(", "));
+    formData.append("Υπηρεσίες", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
     formData.append("Συντριβάνια", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
     formData.append("Σύνολο", `${totalPrice}€`);
 
-    await fetch("https://api.web3forms.com/submit", {
+    const response = await fetch("https://api.web3forms.com/submit", {
       method: "POST",
       body: formData,
     });
 
-    await fetchBookingDates();
-    setSuccess(true);
+    const result = await response.json();
+
+    if (result.success) {
+      await fetchBookingDates();
+      setSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      alert("Το email δεν στάλθηκε. Δοκίμασε ξανά.");
+    }
   };
 
   if (success) {
@@ -141,8 +154,13 @@ export default function Home() {
         <div className="successBox">
           <p className="eyebrow">KALOGIROU TEAM</p>
           <h1>Ευχαριστούμε!</h1>
-          <p>Το αίτημα κράτησης στάλθηκε επιτυχώς. Θα επικοινωνήσουμε μαζί σας σύντομα.</p>
-          <button onClick={() => setSuccess(false)} className="darkBtn">ΕΠΙΣΤΡΟΦΗ</button>
+          <p>
+            Ευχαριστούμε για την προτίμησή σας. Το αίτημα κράτησης στάλθηκε επιτυχώς
+            και θα επικοινωνήσουμε μαζί σας σύντομα.
+          </p>
+          <button onClick={() => setSuccess(false)} className="darkBtn">
+            ← ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ
+          </button>
         </div>
         <Styles />
       </main>
@@ -154,9 +172,15 @@ export default function Home() {
       <nav className="nav">
         <div className="logo">KALOGIROU TEAM</div>
         <div className="navLinks">
-          <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>Services</button>
-          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>Pricing</button>
-          <button onClick={scrollToBooking} className="navCta">Booking</button>
+          <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>
+            Services
+          </button>
+          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>
+            Pricing
+          </button>
+          <button onClick={scrollToBooking} className="navCta">
+            Booking
+          </button>
         </div>
       </nav>
 
@@ -169,8 +193,13 @@ export default function Home() {
             βαφτίσεις, parties, live και πανηγύρια.
           </p>
           <div className="heroButtons">
-            <button onClick={scrollToBooking} className="darkBtn">ΚΛΕΙΣΕ EVENT</button>
-            <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} className="lightBtn">
+            <button onClick={scrollToBooking} className="darkBtn">
+              ΚΛΕΙΣΕ EVENT
+            </button>
+            <button
+              onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
+              className="lightBtn"
+            >
               ΔΕΣ ΥΠΗΡΕΣΙΕΣ
             </button>
           </div>
@@ -227,7 +256,8 @@ export default function Home() {
             Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία.
           </p>
           <p className="priceNote">
-            Η τιμή είναι ενδεικτική. Αν ο χώρος είναι μικρός ή χρειάζεστε πιο οικονομική λύση, γράψτε το στο αίτημα και θα σας προτείνουμε καλύτερη προσφορά.
+            Η τιμή είναι ενδεικτική. Αν ο χώρος είναι μικρός ή χρειάζεστε πιο οικονομική λύση,
+            γράψτε το στο αίτημα και θα σας προτείνουμε καλύτερη προσφορά.
           </p>
         </div>
 
@@ -244,9 +274,13 @@ export default function Home() {
             </div>
 
             <div className="counter">
-              <button type="button" onClick={() => changeFountains("down")}>−</button>
+              <button type="button" onClick={() => changeFountains("down")}>
+                −
+              </button>
               <span>{fountains}</span>
-              <button type="button" onClick={() => changeFountains("up")}>+</button>
+              <button type="button" onClick={() => changeFountains("up")}>
+                +
+              </button>
             </div>
 
             <div className="fountainPrice">
@@ -260,7 +294,9 @@ export default function Home() {
             <strong>{totalPrice}€</strong>
           </div>
 
-          <button onClick={scrollToBooking} className="darkBtn full">ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ</button>
+          <button onClick={scrollToBooking} className="darkBtn full">
+            ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
+          </button>
         </div>
       </section>
 
@@ -269,7 +305,8 @@ export default function Home() {
           <p className="eyebrow">BOOK YOUR DATE</p>
           <h2>Στείλε αίτημα κράτησης.</h2>
           <p>
-            Διάλεξε ημερομηνία και στείλε τα στοιχεία σου. Οι πορτοκαλί ημερομηνίες έχουν ήδη εκκρεμές αίτημα.
+            Διάλεξε ημερομηνία και στείλε τα στοιχεία σου. Οι πορτοκαλί ημερομηνίες
+            έχουν ήδη εκκρεμές αίτημα.
           </p>
           <p className="priceNote">
             Τα προαιρετικά στοιχεία βοηθούν να σας προτείνουμε πιο σωστή και οικονομική προσφορά.
@@ -300,11 +337,13 @@ export default function Home() {
           <input name="Τοποθεσία" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
 
           <select name="Τύπος εκδήλωσης" required defaultValue="">
-            <option value="" disabled>Τύπος εκδήλωσης</option>
+            <option value="" disabled>
+              Τύπος εκδήλωσης
+            </option>
             <option>Γάμος</option>
             <option>Βάπτιση</option>
             <option>Party</option>
-            <option>Γάμος & Βάπτιση</option>
+            <option>Corporate Event</option>
             <option>Live Event</option>
             <option>Πανηγύρι</option>
             <option>Άλλο</option>
@@ -343,7 +382,9 @@ export default function Home() {
             <strong>{totalPrice}€</strong>
           </div>
 
-          <button type="submit" className="darkBtn full">ΑΠΟΣΤΟΛΗ ΑΙΤΗΜΑΤΟΣ</button>
+          <button type="submit" className="darkBtn full">
+            ΑΠΟΣΤΟΛΗ ΑΙΤΗΜΑΤΟΣ
+          </button>
         </form>
       </section>
 
