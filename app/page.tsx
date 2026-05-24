@@ -132,21 +132,19 @@ export default function Home() {
     formData.append("Συντριβάνια", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
     formData.append("Σύνολο", `${totalPrice}€`);
 
-    const response = await fetch("https://api.web3forms.com/submit", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+  await fetch("https://api.web3forms.com/submit", {
+    method: "POST",
+    body: formData,
+  });
+} catch (error) {
+  console.log("Email failed:", error);
+}
 
-    const result = await response.json();
-
-    if (result.success) {
-      await fetchBookingDates();
-      setSuccess(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      alert("Το email δεν στάλθηκε. Δοκίμασε ξανά.");
-    }
-  };
+await fetchBookingDates();
+setSuccess(true);
+window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
   if (success) {
     return (
