@@ -26,6 +26,7 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState("");
   const [dateMessage, setDateMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchBookingDates();
@@ -109,22 +110,9 @@ export default function Home() {
     return res.ok;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const sendEmail = async (form: HTMLFormElement) => {
+    const formData = new FormData(form);
 
-    if (getDateStatus(selectedDate) === "confirmed") {
-      alert("Αυτή η ημερομηνία έχει κλειστεί.");
-      return;
-    }
-
-    const supabaseSaved = await saveBookingToSupabase();
-
-    if (!supabaseSaved) {
-      alert("Δεν αποθηκεύτηκε η ημερομηνία. Δοκίμασε ξανά.");
-      return;
-    }
-
-    const formData = new FormData(e.currentTarget);
     formData.append("access_key", "89ec85a7-a56b-4940-885d-55d02282101b");
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
     formData.append("Ημερομηνία", selectedDate);
@@ -133,18 +121,50 @@ export default function Home() {
     formData.append("Σύνολο", `${totalPrice}€`);
 
     try {
-  await fetch("https://api.web3forms.com/submit", {
-    method: "POST",
-    body: formData,
-  });
-} catch (error) {
-  console.log("Email failed:", error);
-}
+      await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+    } catch (error) {
+      console.log("Email failed:", error);
+    }
+  };
 
-await fetchBookingDates();
-setSuccess(true);
-window.scrollTo({ top: 0, behavior: "smooth" });
-}
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    if (!selectedDate) {
+      alert("Παρακαλώ επιλέξτε ημερομηνία.");
+      return;
+    }
+
+    if (getDateStatus(selectedDate) === "confirmed") {
+      alert("Αυτή η ημερομηνία έχει κλειστεί.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const form = e.currentTarget;
+
+    const supabaseSaved = await saveBookingToSupabase();
+
+    if (!supabaseSaved) {
+      setIsSubmitting(false);
+      alert("Δεν αποθηκεύτηκε η κράτηση. Δοκίμασε ξανά.");
+      return;
+    }
+
+    setSuccess(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    await sendEmail(form);
+    await fetchBookingDates();
+
+    setIsSubmitting(false);
+  };
 
   if (success) {
     return (
@@ -153,8 +173,8 @@ window.scrollTo({ top: 0, behavior: "smooth" });
           <p className="eyebrow">KALOGIROU TEAM</p>
           <h1>Ευχαριστούμε!</h1>
           <p>
-            Ευχαριστούμε για την προτίμησή σας. Το αίτημα κράτησης στάλθηκε επιτυχώς
-            και θα επικοινωνήσουμε μαζί σας σύντομα.
+            Ευχαριστούμε για την προτίμησή σας. Το αίτημα κράτησης καταχωρήθηκε
+            επιτυχώς και θα επικοινωνήσουμε μαζί σας σύντομα.
           </p>
           <button onClick={() => setSuccess(false)} className="darkBtn">
             ← ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ
@@ -220,6 +240,7 @@ window.scrollTo({ top: 0, behavior: "smooth" });
           {services.map((service) => (
             <button
               key={service.name}
+              type="button"
               onClick={() => toggleService(service.name)}
               className={selectedServices.includes(service.name) ? "serviceCard active" : "serviceCard"}
             >
@@ -292,7 +313,7 @@ window.scrollTo({ top: 0, behavior: "smooth" });
             <strong>{totalPrice}€</strong>
           </div>
 
-          <button onClick={scrollToBooking} className="darkBtn full">
+          <button type="button" onClick={scrollToBooking} className="darkBtn full">
             ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
           </button>
         </div>
@@ -380,8 +401,8 @@ window.scrollTo({ top: 0, behavior: "smooth" });
             <strong>{totalPrice}€</strong>
           </div>
 
-          <button type="submit" className="darkBtn full">
-            ΑΠΟΣΤΟΛΗ ΑΙΤΗΜΑΤΟΣ
+          <button type="submit" className="darkBtn full" disabled={isSubmitting}>
+            {isSubmitting ? "ΑΠΟΣΤΟΛΗ..." : "ΑΠΟΣΤΟΛΗ ΑΙΤΗΜΑΤΟΣ"}
           </button>
         </form>
       </section>
@@ -524,6 +545,11 @@ function Styles() {
         background: rgb(23, 23, 23);
         color: white;
         box-shadow: 0 18px 35px rgba(0, 0, 0, 0.18);
+      }
+
+      .darkBtn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
       }
 
       .lightBtn {
