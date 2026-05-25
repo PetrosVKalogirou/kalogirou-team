@@ -27,6 +27,9 @@ export const metadata: Metadata = {
     "Kalogirou Team",
     "DJ Greece",
   ],
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
