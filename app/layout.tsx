@@ -30,6 +30,12 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.png",
   },
+  openGraph: {
+    title: "Kalogirou Team | DJ Εύβοια",
+    description:
+      "DJ services για γάμους, βαπτίσεις, parties και events στην Εύβοια.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
