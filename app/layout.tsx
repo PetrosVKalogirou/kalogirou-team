@@ -13,12 +13,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kalogirou Team | DJ Εύβοια | DJ Γάμοι | Events | Ηχητική Κάλυψη",
+  title: "Kalogirou Team | DJ Εύβοια | Γάμοι • Βαπτίσεις • Parties • Events",
   description:
-    "DJ υπηρεσίες σε Αυλωνάρι, Εύβοια και γύρω περιοχές. Γάμοι, βαπτίσεις, parties, live events, ηχητική κάλυψη, φωτισμός και special effects.",
-  verification: {
-    google: "45XLvJ1m0xKGcet7S11bpBJOXkyqsqfKUNKNfk1zwxI",
-  },
+    "Kalogirou Team - Επαγγελματίας DJ στην Εύβοια για γάμους, βαπτίσεις, parties, live events, ηχητικό εξοπλισμό, φωτισμό και special effects. Αυλωνάρι Εύβοιας και γύρω περιοχές.",
+  keywords: [
+    "DJ Εύβοια",
+    "DJ Αυλωνάρι",
+    "DJ γάμος Εύβοια",
+    "DJ βάπτιση Εύβοια",
+    "DJ party Εύβοια",
+    "ηχητικός εξοπλισμός Εύβοια",
+    "φωτισμός εκδηλώσεων Εύβοια",
+    "Kalogirou Team",
+    "DJ Greece",
+  ],
 };
 
 export default function RootLayout({
