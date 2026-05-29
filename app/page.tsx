@@ -14,6 +14,7 @@ const INSTAGRAM_URL =
   "https://www.instagram.com/djvasilis_kalogirou?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 const FACEBOOK_URL = "https://www.facebook.com/djkalogirou";
 const PHONE = "6984249876";
+const WEB3FORMS_KEY = "89ec85a7-a56b-4940-885d-55d02282101b";
 
 const services = [
   { name: "DJing", price: 300, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
@@ -33,8 +34,18 @@ export default function Home() {
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [pricesUnlocked, setPricesUnlocked] = useState(false);
+  const [unlockName, setUnlockName] = useState("");
+  const [unlockEmail, setUnlockEmail] = useState("");
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
   useEffect(() => {
     fetchBookingDates();
+
+    const savedUnlock = localStorage.getItem("kalogirou_prices_unlocked");
+    if (savedUnlock === "yes") {
+      setPricesUnlocked(true);
+    }
   }, []);
 
   const fetchBookingDates = async () => {
@@ -97,6 +108,10 @@ export default function Home() {
     document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollToPricing = () => {
+    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const saveBookingToSupabase = async () => {
     const res = await fetch(`${SUPABASE_URL}/bookings`, {
       method: "POST",
@@ -115,15 +130,57 @@ export default function Home() {
     return res.ok;
   };
 
+  const handleUnlockPrices = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isUnlocking) return;
+
+    const cleanName = unlockName.trim();
+    const cleanEmail = unlockEmail.trim();
+
+    if (cleanName.length < 3) {
+      alert("Παρακαλώ γράψτε ονοματεπώνυμο.");
+      return;
+    }
+
+    if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      alert("Παρακαλώ γράψτε ένα σωστό email.");
+      return;
+    }
+
+    setIsUnlocking(true);
+
+    const formData = new FormData();
+    formData.append("access_key", WEB3FORMS_KEY);
+    formData.append("subject", "Ξεκλείδωμα τιμών από Kalogirou Team");
+    formData.append("Name", cleanName);
+    formData.append("Email", cleanEmail);
+    formData.append("Action", "Ο επισκέπτης ξεκλείδωσε τις ενδεικτικές τιμές.");
+    formData.append("Website", "kalogirouteam.gr");
+
+    try {
+      await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+    } catch (error) {
+      console.log("Unlock email failed:", error);
+    }
+
+    localStorage.setItem("kalogirou_prices_unlocked", "yes");
+    setPricesUnlocked(true);
+    setIsUnlocking(false);
+  };
+
   const sendEmail = async (form: HTMLFormElement) => {
     const formData = new FormData(form);
 
-    formData.append("access_key", "89ec85a7-a56b-4940-885d-55d02282101b");
+    formData.append("access_key", WEB3FORMS_KEY);
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
     formData.append("Event date", selectedDate);
     formData.append("Selected services", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
     formData.append("Fountains", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
-    formData.append("Total price", `${totalPrice}€`);
+    formData.append("Total price", pricesUnlocked ? `${totalPrice}€` : "Οι τιμές δεν είχαν ξεκλειδωθεί");
 
     try {
       await fetch("https://api.web3forms.com/submit", {
@@ -193,22 +250,23 @@ export default function Home() {
     <main className="page">
       <nav className="nav">
         <div className="logo">
-  <img
-  src="/logo.png"
-  alt="Kalogirou Team"
-  style={{
-    height: "180px",
-    width: "auto",
-    display: "block",
-    marginTop: "18px",
-  }}
-/>
-</div>
+          <img
+            src="/logo.png"
+            alt="Kalogirou Team"
+            style={{
+              height: "180px",
+              width: "auto",
+              display: "block",
+              marginTop: "18px",
+            }}
+          />
+        </div>
+
         <div className="navLinks">
           <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>
             Services
           </button>
-          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>
+          <button onClick={scrollToPricing}>
             Pricing
           </button>
           <button onClick={scrollToBooking} className="navCta">
@@ -277,7 +335,12 @@ export default function Home() {
                 <h3>{service.name}</h3>
                 <p>{service.desc}</p>
               </div>
-              <strong>{service.price}€</strong>
+
+              {pricesUnlocked ? (
+                <strong>{service.price}€</strong>
+              ) : (
+                <span className="lockedPrice">Ξεκλείδωμα τιμής</span>
+              )}
             </button>
           ))}
         </div>
@@ -288,12 +351,12 @@ export default function Home() {
         <div className="galleryText">
           <p className="eyebrow">EVENT ATMOSPHERE</p>
           <ul className="eventList">
-  <li>Καθαρός ήχος</li>
-  <li>Επαγγελματικός φωτισμός</li>
-  <li>Ειδικά εφέ</li>
-  <li>DJ Experience</li>
-  <li>Υποστήριξη εκδήλωσης</li>
-</ul>
+            <li>Καθαρός ήχος</li>
+            <li>Επαγγελματικός φωτισμός</li>
+            <li>Ειδικά εφέ</li>
+            <li>DJ Experience</li>
+            <li>Υποστήριξη εκδήλωσης</li>
+          </ul>
           <p>
             Από τον πρώτο χορό μέχρι το τελευταίο τραγούδι, ο στόχος είναι η εκδήλωση
             να φαίνεται και να ακούγεται επαγγελματική.
@@ -305,9 +368,15 @@ export default function Home() {
       <section id="pricing" className="pricing">
         <div>
           <p className="eyebrow">PRICE ESTIMATOR</p>
-          <h2>Υπολόγισε ενδεικτικά το κόστος.</h2>
+          <h2>
+            {pricesUnlocked
+              ? "Υπολόγισε ενδεικτικά το κόστος."
+              : "Δείτε ενδεικτικά που κυμαίνονται οι τιμές."}
+          </h2>
           <p>
-            Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία.
+            {pricesUnlocked
+              ? "Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία."
+              : "Για να δείτε τις ενδεικτικές τιμές, κάντε μια απλή σύνδεση με ονοματεπώνυμο και email."}
           </p>
           <p className="priceNote">
             Η τιμή είναι ενδεικτική. Αν ο χώρος είναι μικρός ή χρειάζεστε πιο οικονομική λύση,
@@ -315,39 +384,73 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="pricePanel">
-          <div className="line">
-            <span>Επιλεγμένες υπηρεσίες</span>
-            <strong>{selectedServices.length}</strong>
-          </div>
-
-          <div className="fountainBox">
-            <div>
-              <strong>Επιδαπέδια Συντριβάνια</strong>
-              <p>2 τεμ. = 80€ / από 4 και πάνω 35€ το τεμάχιο</p>
+        {pricesUnlocked ? (
+          <div className="pricePanel">
+            <div className="line">
+              <span>Επιλεγμένες υπηρεσίες</span>
+              <strong>{selectedServices.length}</strong>
             </div>
 
-            <div className="counter">
-              <button type="button" onClick={() => changeFountains("down")}>−</button>
-              <span>{fountains}</span>
-              <button type="button" onClick={() => changeFountains("up")}>+</button>
+            <div className="fountainBox">
+              <div>
+                <strong>Επιδαπέδια Συντριβάνια</strong>
+                <p>2 τεμ. = 80€ / από 4 και πάνω 35€ το τεμάχιο</p>
+              </div>
+
+              <div className="counter">
+                <button type="button" onClick={() => changeFountains("down")}>−</button>
+                <span>{fountains}</span>
+                <button type="button" onClick={() => changeFountains("up")}>+</button>
+              </div>
+
+              <div className="fountainPrice">
+                <span>Τιμή συντριβανιών</span>
+                <strong>{fountainsPrice}€</strong>
+              </div>
             </div>
 
-            <div className="fountainPrice">
-              <span>Τιμή συντριβανιών</span>
-              <strong>{fountainsPrice}€</strong>
+            <div className="total">
+              <span>Σύνολο</span>
+              <strong>{totalPrice}€</strong>
             </div>
-          </div>
 
-          <div className="total">
-            <span>Σύνολο</span>
-            <strong>{totalPrice}€</strong>
+            <button type="button" onClick={scrollToBooking} className="darkBtn full">
+              ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
+            </button>
           </div>
+        ) : (
+          <form onSubmit={handleUnlockPrices} className="unlockBox">
+            <p className="unlockTitle">Ξεκλείδωμα ενδεικτικών τιμών</p>
+            <p className="unlockText">
+              Συμπληρώστε ονοματεπώνυμο και email για να εμφανιστούν οι υπηρεσίες με τις ενδεικτικές τιμές.
+            </p>
 
-          <button type="button" onClick={scrollToBooking} className="darkBtn full">
-            ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
-          </button>
-        </div>
+            <input
+              value={unlockName}
+              onChange={(e) => setUnlockName(e.target.value)}
+              name="Unlock name"
+              placeholder="Ονοματεπώνυμο"
+              required
+            />
+
+            <input
+              value={unlockEmail}
+              onChange={(e) => setUnlockEmail(e.target.value)}
+              type="email"
+              name="Unlock email"
+              placeholder="Email"
+              required
+            />
+
+            <button type="submit" className="darkBtn full" disabled={isUnlocking}>
+              {isUnlocking ? "ΓΙΝΕΤΑΙ ΣΥΝΔΕΣΗ..." : "ΔΕΙΤΕ ΤΙΣ ΤΙΜΕΣ"}
+            </button>
+
+            <p className="unlockSmall">
+              Τα στοιχεία χρησιμοποιούνται μόνο για επικοινωνία σχετικά με τις υπηρεσίες της Kalogirou Team.
+            </p>
+          </form>
+        )}
       </section>
 
       <section id="booking" className="booking">
@@ -427,7 +530,7 @@ export default function Home() {
 
           <div className="bookingTotal">
             <span>Σύνολο επιλογών</span>
-            <strong>{totalPrice}€</strong>
+            <strong>{pricesUnlocked ? `${totalPrice}€` : "Ξεκλειδώστε τις τιμές"}</strong>
           </div>
 
           <button type="submit" className="darkBtn full" disabled={isSubmitting}>
@@ -531,13 +634,13 @@ function Styles() {
       }
 
       .eyebrow {
-  color: rgb(167, 122, 45);
-  font-weight: 900;
-  letter-spacing: 2px;
-  font-size: 13px;
-  margin: 0 0 16px;
-  text-align: center;
-}
+        color: rgb(167, 122, 45);
+        font-weight: 900;
+        letter-spacing: 2px;
+        font-size: 13px;
+        margin: 0 0 16px;
+        text-align: center;
+      }
 
       .hero h1 {
         font-size: clamp(48px, 7vw, 96px);
@@ -700,6 +803,14 @@ function Styles() {
         color: rgb(167, 122, 45);
       }
 
+      .lockedPrice {
+        display: inline-block;
+        margin-top: 20px;
+        color: rgb(167, 122, 45);
+        font-weight: 900;
+        font-size: 15px;
+      }
+
       .gallery {
         padding: 40px 7vw 100px;
         display: grid;
@@ -736,6 +847,25 @@ function Styles() {
         color: rgb(213, 213, 213);
       }
 
+      .eventList {
+        list-style: none;
+        padding: 0;
+        margin: 0 auto 22px;
+        color: white;
+        font-size: 32px;
+        line-height: 1.45;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .eventList li {
+        margin-bottom: 12px;
+      }
+
+      .eventList li::before {
+        content: "- ";
+      }
+
       .pricing {
         display: grid;
         grid-template-columns: 1fr 440px;
@@ -752,12 +882,45 @@ function Styles() {
         font-weight: 700;
       }
 
-      .pricePanel {
+      .pricePanel,
+      .unlockBox {
         background: rgb(250, 248, 243);
         border: 1px solid rgb(238, 238, 238);
         border-radius: 34px;
         padding: 30px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+      }
+
+      .unlockBox {
+        display: grid;
+        gap: 14px;
+      }
+
+      .unlockTitle {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 900;
+        color: rgb(23, 23, 23);
+      }
+
+      .unlockText,
+      .unlockSmall {
+        margin: 0;
+        color: rgb(102, 102, 102);
+      }
+
+      .unlockSmall {
+        font-size: 13px;
+      }
+
+      .unlockBox input {
+        width: 100%;
+        padding: 17px 18px;
+        border-radius: 16px;
+        border: 1px solid rgb(221, 221, 221);
+        background: white;
+        color: rgb(23, 23, 23);
+        font-size: 16px;
       }
 
       .line,
@@ -933,9 +1096,9 @@ function Styles() {
           padding: 0 18px;
         }
 
-        .logo {
-          font-size: 13px;
-          letter-spacing: 1.2px;
+        .logo img {
+          height: 110px !important;
+          margin-top: 12px !important;
         }
 
         .navLinks button:not(.navCta) {
@@ -1038,12 +1201,17 @@ function Styles() {
           padding: 28px;
         }
 
+        .eventList {
+          font-size: 28px;
+        }
+
         .pricing {
           grid-template-columns: 1fr;
           gap: 28px;
         }
 
-        .pricePanel {
+        .pricePanel,
+        .unlockBox {
           padding: 22px;
           border-radius: 28px;
         }
@@ -1092,6 +1260,10 @@ function Styles() {
         .heroImage {
           height: 360px;
           min-height: 360px;
+        }
+
+        .eventList {
+          font-size: 24px;
         }
       }
     `}</style>
