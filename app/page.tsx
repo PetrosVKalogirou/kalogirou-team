@@ -14,7 +14,7 @@ const INSTAGRAM_URL =
   "https://www.instagram.com/djvasilis_kalogirou?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 const FACEBOOK_URL = "https://www.facebook.com/djkalogirou";
 const PHONE = "6984249876";
-const WEB3FORMS_KEY = "89ec85a7-a56b-4940-885d-55d02282101b";
+const WEB3FORMS_KEY = "5645dbee-d04b-4046-9301-60f6a8ea2e8e";
 
 const services = [
   { name: "DJing", price: 300, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
