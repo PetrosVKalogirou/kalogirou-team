@@ -16,7 +16,7 @@ const FACEBOOK_URL = "https://www.facebook.com/djkalogirou";
 const PHONE = "6984249876";
 
 const services = [
-  { name: "DJing", price: 350, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
+  { name: "DJing", price: 300, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
   { name: "Ηχητικός Εξοπλισμός", price: 300, desc: "Επαγγελματικός ήχος για μικρές και μεγάλες εκδηλώσεις." },
   { name: "Φωτορυθμικά", price: 150, desc: "Elegant φωτισμός για ατμόσφαιρα και ένταση." },
   { name: "Καπνός Ξηρού Πάγου", price: 150, desc: "Premium εφέ για πρώτο χορό και ξεχωριστές στιγμές." },
@@ -192,7 +192,18 @@ export default function Home() {
   return (
     <main className="page">
       <nav className="nav">
-        <div className="logo">KALOGIROU TEAM</div>
+        <div className="logo">
+  <img
+  src="/logo.png"
+  alt="Kalogirou Team"
+  style={{
+    height: "180px",
+    width: "auto",
+    display: "block",
+    marginTop: "18px",
+  }}
+/>
+</div>
         <div className="navLinks">
           <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>
             Services
@@ -276,7 +287,13 @@ export default function Home() {
         <div className="galleryImage one" />
         <div className="galleryText">
           <p className="eyebrow">EVENT ATMOSPHERE</p>
-          <h2>Καθαρός ήχος, κομψός φωτισμός, σωστό setup.</h2>
+          <ul className="eventList">
+  <li>Καθαρός ήχος</li>
+  <li>Επαγγελματικός φωτισμός</li>
+  <li>Ειδικά εφέ</li>
+  <li>DJ Experience</li>
+  <li>Υποστήριξη εκδήλωσης</li>
+</ul>
           <p>
             Από τον πρώτο χορό μέχρι το τελευταίο τραγούδι, ο στόχος είναι η εκδήλωση
             να φαίνεται και να ακούγεται επαγγελματική.
@@ -514,12 +531,13 @@ function Styles() {
       }
 
       .eyebrow {
-        color: rgb(167, 122, 45);
-        font-weight: 900;
-        letter-spacing: 2px;
-        font-size: 13px;
-        margin: 0 0 16px;
-      }
+  color: rgb(167, 122, 45);
+  font-weight: 900;
+  letter-spacing: 2px;
+  font-size: 13px;
+  margin: 0 0 16px;
+  text-align: center;
+}
 
       .hero h1 {
         font-size: clamp(48px, 7vw, 96px);
