@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type BookingDate = {
   event_date: string;
   status: "pending" | "confirmed" | string;
+};
+
+type EventType = "Γάμος" | "Βάπτιση" | "Γάμος & Βάπτιση" | "Party" | "Corporate Event";
+type GuestRange = "0-150" | "150-500" | "500+";
+type VenueType = "Εσωτερικός χώρος" | "Εξωτερικός χώρος" | "Και τα δύο";
+type OrchestraRange = "2-3" | "4-5" | "6-7" | "8+";
+
+type StoryCategory = {
+  id: string;
+  title: string;
+  icon: string;
+  videos: string[];
 };
 
 const SUPABASE_URL = "https://edsepuksrgfuecpmgubj.supabase.co/rest/v1";
@@ -16,17 +28,80 @@ const FACEBOOK_URL = "https://www.facebook.com/djkalogirou";
 const PHONE = "6984249876";
 const WEB3FORMS_KEY = "5645dbee-d04b-4046-9301-60f6a8ea2e8e";
 
-const services = [
-  { name: "DJing", price: 300, desc: "Μουσική κάλυψη για γάμους, βαφτίσεις, parties και events." },
-  { name: "Ηχητικός Εξοπλισμός", price: 300, desc: "Επαγγελματικός ήχος για μικρές και μεγάλες εκδηλώσεις." },
+const eventTypes: EventType[] = ["Γάμος", "Βάπτιση", "Γάμος & Βάπτιση", "Party", "Corporate Event"];
+const guestRanges: GuestRange[] = ["0-150", "150-500", "500+"];
+const venueTypes: VenueType[] = ["Εσωτερικός χώρος", "Εξωτερικός χώρος", "Και τα δύο"];
+const orchestraRanges: OrchestraRange[] = ["2-3", "4-5", "6-7", "8+"];
+
+const djPrices: Record<EventType, number> = {
+  "Γάμος": 250,
+  "Βάπτιση": 200,
+  "Γάμος & Βάπτιση": 250,
+  "Party": 200,
+  "Corporate Event": 200,
+};
+
+const soundPrices: Record<GuestRange, number> = {
+  "0-150": 250,
+  "150-500": 300,
+  "500+": 400,
+};
+
+const orchestraPrices: Record<OrchestraRange, number> = {
+  "2-3": 200,
+  "4-5": 200,
+  "6-7": 200,
+  "8+": 200,
+};
+
+const fixedServices = [
   { name: "Φωτορυθμικά", price: 150, desc: "Elegant φωτισμός για ατμόσφαιρα και ένταση." },
   { name: "Καπνός Ξηρού Πάγου", price: 150, desc: "Premium εφέ για πρώτο χορό και ξεχωριστές στιγμές." },
 ];
 
 const fountainOptions = [0, 2, 4, 6, 8, 10, 12];
 
+const storyCategories: StoryCategory[] = [
+  {
+    id: "wedding",
+    title: "Γάμοι",
+    icon: "💍",
+    videos: ["/stories/wedding-1.mp4", "/stories/wedding-2.mp4", "/stories/wedding-3.mp4"],
+  },
+  {
+    id: "dance",
+    title: "Πίστα",
+    icon: "🕺",
+    videos: ["/stories/dance-1.mp4", "/stories/dance-2.mp4", "/stories/dance-3.mp4"],
+  },
+  {
+    id: "party",
+    title: "Party",
+    icon: "🎉",
+    videos: [
+      "/stories/party-1.mp4",
+      "/stories/party-2.mp4",
+      "/stories/party-3.mp4",
+      "/stories/party-4.mp4",
+      "/stories/party-5.mp4",
+    ],
+  },
+  {
+    id: "setup",
+    title: "Setup",
+    icon: "🎛️",
+    videos: ["/stories/setup-1.mp4", "/stories/setup-2.mp4", "/stories/setup-3.mp4"],
+  },
+];
+
 export default function Home() {
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [eventType, setEventType] = useState<EventType>("Γάμος");
+  const [guestRange, setGuestRange] = useState<GuestRange>("0-150");
+  const [venueType, setVenueType] = useState<VenueType>("Εξωτερικός χώρος");
+  const [hasOrchestra, setHasOrchestra] = useState(false);
+  const [orchestraRange, setOrchestraRange] = useState<OrchestraRange>("4-5");
+
+  const [selectedServices, setSelectedServices] = useState<string[]>(["DJing", "Ηχητικός Εξοπλισμός"]);
   const [fountains, setFountains] = useState(0);
   const [bookingDates, setBookingDates] = useState<BookingDate[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -39,14 +114,26 @@ export default function Home() {
   const [unlockEmail, setUnlockEmail] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
 
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const activeStory = activeCategoryIndex !== null ? storyCategories[activeCategoryIndex] : null;
+
   useEffect(() => {
     fetchBookingDates();
 
     const savedUnlock = localStorage.getItem("kalogirou_prices_unlocked");
-    if (savedUnlock === "yes") {
-      setPricesUnlocked(true);
-    }
+    if (savedUnlock === "yes") setPricesUnlocked(true);
   }, []);
+
+  useEffect(() => {
+    if (activeStory && videoRef.current) {
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  }, [activeCategoryIndex, activeVideoIndex, activeStory]);
 
   const fetchBookingDates = async () => {
     const res = await fetch(`${SUPABASE_URL}/bookings?select=event_date,status`, {
@@ -70,21 +157,28 @@ export default function Home() {
     setSelectedDate(date);
     const status = getDateStatus(date);
 
-    if (status === "confirmed") {
-      setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί.");
-    } else if (status === "pending") {
-      setDateMessage("🟠 Υπάρχει ήδη εκκρεμές αίτημα για αυτή την ημερομηνία.");
-    } else {
-      setDateMessage("✅ Η ημερομηνία φαίνεται διαθέσιμη.");
-    }
+    if (status === "confirmed") setDateMessage("🔴 Αυτή η ημερομηνία έχει κλειστεί.");
+    else if (status === "pending") setDateMessage("🟠 Υπάρχει ήδη εκκρεμές αίτημα για αυτή την ημερομηνία.");
+    else setDateMessage("✅ Η ημερομηνία φαίνεται διαθέσιμη.");
   };
 
+  const djPrice = djPrices[eventType];
+  const soundPrice = soundPrices[guestRange];
+  const orchestraPrice = hasOrchestra ? orchestraPrices[orchestraRange] : 0;
   const fountainsPrice = fountains === 0 ? 0 : fountains === 2 ? 80 : fountains * 35;
+
+  const services = [
+    { name: "DJing", price: djPrice, desc: "Μουσική κάλυψη προσαρμοσμένη στον τύπο της εκδήλωσης." },
+    { name: "Ηχητικός Εξοπλισμός", price: soundPrice, desc: "Ηχητικό setup ανάλογα με τα άτομα και τις ανάγκες του χώρου." },
+    ...fixedServices,
+  ];
 
   const totalPrice =
     services
       .filter((item) => selectedServices.includes(item.name))
-      .reduce((sum, item) => sum + item.price, 0) + fountainsPrice;
+      .reduce((sum, item) => sum + item.price, 0) +
+    fountainsPrice +
+    orchestraPrice;
 
   const toggleService = (name: string) => {
     setSelectedServices((old) =>
@@ -94,22 +188,71 @@ export default function Home() {
 
   const changeFountains = (direction: "up" | "down") => {
     const index = fountainOptions.indexOf(fountains);
-
-    if (direction === "up" && index < fountainOptions.length - 1) {
-      setFountains(fountainOptions[index + 1]);
-    }
-
-    if (direction === "down" && index > 0) {
-      setFountains(fountainOptions[index - 1]);
-    }
+    if (direction === "up" && index < fountainOptions.length - 1) setFountains(fountainOptions[index + 1]);
+    if (direction === "down" && index > 0) setFountains(fountainOptions[index - 1]);
   };
 
   const scrollToBooking = () => {
     document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const scrollToPricing = () => {
-    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+  const scrollToCalculator = () => {
+    document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const openStory = (index: number) => {
+    setActiveCategoryIndex(index);
+    setActiveVideoIndex(0);
+  };
+
+  const closeStory = () => {
+    setActiveCategoryIndex(null);
+    setActiveVideoIndex(0);
+  };
+
+  const nextStoryVideo = () => {
+    if (activeCategoryIndex === null) return;
+
+    const currentCategory = storyCategories[activeCategoryIndex];
+
+    if (activeVideoIndex < currentCategory.videos.length - 1) {
+      setActiveVideoIndex((old) => old + 1);
+      return;
+    }
+
+    if (activeCategoryIndex < storyCategories.length - 1) {
+      setActiveCategoryIndex((old) => (old === null ? null : old + 1));
+      setActiveVideoIndex(0);
+      return;
+    }
+
+    closeStory();
+  };
+
+  const previousStoryVideo = () => {
+    if (activeCategoryIndex === null) return;
+
+    if (activeVideoIndex > 0) {
+      setActiveVideoIndex((old) => old - 1);
+      return;
+    }
+
+    if (activeCategoryIndex > 0) {
+      const previousCategoryIndex = activeCategoryIndex - 1;
+      setActiveCategoryIndex(previousCategoryIndex);
+      setActiveVideoIndex(storyCategories[previousCategoryIndex].videos.length - 1);
+    }
+  };
+
+  const handleStoryTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY === null) return;
+
+    const touchEndY = e.changedTouches[0].clientY;
+    const diff = touchEndY - touchStartY;
+
+    if (diff > 90) closeStory();
+
+    setTouchStartY(null);
   };
 
   const saveBookingToSupabase = async () => {
@@ -155,8 +298,6 @@ export default function Home() {
     formData.append("subject", "Ξεκλείδωμα τιμών από Kalogirou Team");
     formData.append("Name", cleanName);
     formData.append("Email", cleanEmail);
-    formData.append("Action", "Ο επισκέπτης ξεκλείδωσε τις ενδεικτικές τιμές.");
-    formData.append("Website", "kalogirouteam.gr");
 
     try {
       await fetch("https://api.web3forms.com/submit", {
@@ -177,9 +318,14 @@ export default function Home() {
 
     formData.append("access_key", WEB3FORMS_KEY);
     formData.append("subject", "Νέα κράτηση από Kalogirou Team");
+    formData.append("Event type", eventType);
+    formData.append("Guests", guestRange);
+    formData.append("Venue", venueType);
+    formData.append("Orchestra", hasOrchestra ? `Ναι - ${orchestraRange} άτομα` : "Όχι");
     formData.append("Event date", selectedDate);
     formData.append("Selected services", selectedServices.length ? selectedServices.join(", ") : "Δεν επιλέχθηκαν");
     formData.append("Fountains", fountains > 0 ? `${fountains} τεμάχια - ${fountainsPrice}€` : "Όχι");
+    formData.append("Orchestra setup price", `${orchestraPrice}€`);
     formData.append("Total price", pricesUnlocked ? `${totalPrice}€` : "Οι τιμές δεν είχαν ξεκλειδωθεί");
 
     try {
@@ -249,26 +395,20 @@ export default function Home() {
   return (
     <main className="page">
       <nav className="nav">
-        <div className="logo">
+        <button
+          type="button"
+          className="logo"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
           <img
             src="/logo.png"
             alt="Kalogirou Team"
-            style={{
-              height: "180px",
-              width: "auto",
-              display: "block",
-              marginTop: "18px",
-            }}
+            style={{ height: "180px", width: "auto", display: "block", marginTop: "18px" }}
           />
-        </div>
+        </button>
 
         <div className="navLinks">
-          <button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>
-            Services
-          </button>
-          <button onClick={scrollToPricing}>
-            Pricing
-          </button>
+          <button onClick={scrollToCalculator}>Calculator</button>
           <button onClick={scrollToBooking} className="navCta">
             Booking
           </button>
@@ -281,17 +421,14 @@ export default function Home() {
           <h1>Luxury event sound experience.</h1>
           <p>
             Μουσική, ηχητικός εξοπλισμός, φωτισμός και ειδικά εφέ για γάμους,
-            βαφτίσεις, parties, live και πανηγύρια.
+            βαφτίσεις, parties, live και εταιρικές εκδηλώσεις.
           </p>
 
           <div className="heroButtons">
             <button onClick={scrollToBooking} className="darkBtn">
               ΚΛΕΙΣΕ EVENT
             </button>
-            <button
-              onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
-              className="lightBtn"
-            >
+            <button onClick={scrollToCalculator} className="lightBtn">
               ΔΕΣ ΥΠΗΡΕΣΙΕΣ
             </button>
           </div>
@@ -319,9 +456,128 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="services" className="section">
-        <p className="eyebrow">WHAT WE OFFER</p>
-        <h2>Υπηρεσίες για κάθε στιγμή της εκδήλωσης.</h2>
+      <section className="storiesSection">
+        <div className="storiesIntro">
+          <p className="eyebrow">REAL EVENT MOMENTS</p>
+          <h2>Ζήστε την ατμόσφαιρα των εκδηλώσεών μας.</h2>
+          <p>
+            Δείτε πραγματικές στιγμές από γάμους, χορούς, parties και επαγγελματικά setups.
+          </p>
+        </div>
+
+        <div className="storyCircles">
+          {storyCategories.map((story, index) => (
+            <button key={story.id} type="button" className="storyCircleBtn" onClick={() => openStory(index)}>
+              <span className="storyRing">
+                <span className="storyIcon">{story.icon}</span>
+              </span>
+              <strong>{story.title}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section id="calculator" className="calculator">
+        <div className="calculatorIntro">
+          <p className="eyebrow">SMART EVENT CALCULATOR</p>
+          <h2>Προσαρμόστε την εκδήλωσή σας.</h2>
+          <p>
+            Επιλέξτε τύπο εκδήλωσης, άτομα, χώρο και ανάγκες ήχου για να δείτε πιο σωστή ενδεικτική τιμή.
+          </p>
+        </div>
+
+        <div className="calculatorPanel">
+          <div className="optionGroup">
+            <h3>Τύπος εκδήλωσης</h3>
+            <div className="optionGrid">
+              {eventTypes.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setEventType(item)}
+                  className={eventType === item ? "optionBtn active" : "optionBtn"}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="optionGroup">
+            <h3>Πόσα άτομα περίπου;</h3>
+            <div className="optionGrid">
+              {guestRanges.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setGuestRange(item)}
+                  className={guestRange === item ? "optionBtn active" : "optionBtn"}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="optionGroup">
+            <h3>Χώρος εκδήλωσης</h3>
+            <div className="optionGrid">
+              {venueTypes.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setVenueType(item)}
+                  className={venueType === item ? "optionBtn active" : "optionBtn"}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="optionGroup">
+            <h3>Θα υπάρχει ορχήστρα;</h3>
+            <div className="optionGrid two">
+              <button
+                type="button"
+                onClick={() => setHasOrchestra(false)}
+                className={!hasOrchestra ? "optionBtn active" : "optionBtn"}
+              >
+                Όχι
+              </button>
+              <button
+                type="button"
+                onClick={() => setHasOrchestra(true)}
+                className={hasOrchestra ? "optionBtn active" : "optionBtn"}
+              >
+                Ναι
+              </button>
+            </div>
+          </div>
+
+          {hasOrchestra && (
+            <div className="optionGroup">
+              <h3>Άτομα ορχήστρας</h3>
+              <div className="optionGrid">
+                {orchestraRanges.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setOrchestraRange(item)}
+                    className={orchestraRange === item ? "optionBtn active" : "optionBtn"}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section id="services" className="section servicesSection">
+        <p className="eyebrow">SERVICES & PRICING</p>
+        <h2>Υπηρεσίες και ενδεικτικές τιμές.</h2>
 
         <div className="servicesGrid">
           {services.map((service) => (
@@ -339,118 +595,118 @@ export default function Home() {
               {pricesUnlocked ? (
                 <strong>{service.price}€</strong>
               ) : (
-                <span className="lockedPrice">Ξεκλείδωμα τιμής</span>
+                <span
+                  className="lockedPrice"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Ξεκλείδωμα τιμής
+                </span>
               )}
             </button>
           ))}
         </div>
       </section>
 
-      <section className="gallery">
-        <div className="galleryImage one" />
-        <div className="galleryText">
-          <p className="eyebrow">EVENT ATMOSPHERE</p>
-          <ul className="eventList">
-            <li>Καθαρός ήχος</li>
-            <li>Επαγγελματικός φωτισμός</li>
-            <li>Ειδικά εφέ</li>
-            <li>DJ Experience</li>
-            <li>Υποστήριξη εκδήλωσης</li>
-          </ul>
-          <p>
-            Από τον πρώτο χορό μέχρι το τελευταίο τραγούδι, ο στόχος είναι η εκδήλωση
-            να φαίνεται και να ακούγεται επαγγελματική.
-          </p>
-        </div>
-        <div className="galleryImage two" />
-      </section>
-
       <section id="pricing" className="pricing">
         <div>
           <p className="eyebrow">PRICE ESTIMATOR</p>
-          <h2>
-            {pricesUnlocked
-              ? "Υπολόγισε ενδεικτικά το κόστος."
-              : "Δείτε ενδεικτικά που κυμαίνονται οι τιμές."}
-          </h2>
+          <h2>{pricesUnlocked ? "Υπολόγισε ενδεικτικά το κόστος." : "Ξεκλειδώστε τις ενδεικτικές τιμές."}</h2>
           <p>
             {pricesUnlocked
-              ? "Επίλεξε υπηρεσίες και δες άμεσα το σύνολο. Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία."
-              : "Για να δείτε τις ενδεικτικές τιμές, κάντε μια απλή σύνδεση με ονοματεπώνυμο και email."}
+              ? "Η τιμή αλλάζει ανάλογα με τον τύπο εκδήλωσης, τα άτομα, τον χώρο και τις υπηρεσίες που θα επιλέξετε."
+              : "Συμπληρώστε ονοματεπώνυμο και email για να δείτε τιμές και σύνολο."}
           </p>
           <p className="priceNote">
-            Η τιμή είναι ενδεικτική. Αν ο χώρος είναι μικρός ή χρειάζεστε πιο οικονομική λύση,
-            γράψτε το στο αίτημα και θα σας προτείνουμε καλύτερη προσφορά.
+            Η τιμή είναι ενδεικτική. Η τελική προσφορά επιβεβαιώνεται μετά την επικοινωνία.
           </p>
         </div>
 
-        {pricesUnlocked ? (
-          <div className="pricePanel">
-            <div className="line">
-              <span>Επιλεγμένες υπηρεσίες</span>
-              <strong>{selectedServices.length}</strong>
-            </div>
-
-            <div className="fountainBox">
-              <div>
-                <strong>Επιδαπέδια Συντριβάνια</strong>
-                <p>2 τεμ. = 80€ / από 4 και πάνω 35€ το τεμάχιο</p>
-              </div>
-
-              <div className="counter">
-                <button type="button" onClick={() => changeFountains("down")}>−</button>
-                <span>{fountains}</span>
-                <button type="button" onClick={() => changeFountains("up")}>+</button>
-              </div>
-
-              <div className="fountainPrice">
-                <span>Τιμή συντριβανιών</span>
-                <strong>{fountainsPrice}€</strong>
-              </div>
-            </div>
-
-            <div className="total">
-              <span>Σύνολο</span>
-              <strong>{totalPrice}€</strong>
-            </div>
-
-            <button type="button" onClick={scrollToBooking} className="darkBtn full">
-              ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
-            </button>
+        <div className="pricePanel">
+          <div className="summaryBox">
+            <span>{eventType}</span>
+            <span>{guestRange} άτομα</span>
+            <span>{venueType}</span>
+            <span>{hasOrchestra ? `Ορχήστρα ${orchestraRange}` : "Χωρίς ορχήστρα"}</span>
           </div>
-        ) : (
-          <form onSubmit={handleUnlockPrices} className="unlockBox">
-            <p className="unlockTitle">Ξεκλείδωμα ενδεικτικών τιμών</p>
-            <p className="unlockText">
-              Συμπληρώστε ονοματεπώνυμο και email για να εμφανιστούν οι υπηρεσίες με τις ενδεικτικές τιμές.
-            </p>
 
-            <input
-              value={unlockName}
-              onChange={(e) => setUnlockName(e.target.value)}
-              name="Unlock name"
-              placeholder="Ονοματεπώνυμο"
-              required
-            />
+          {pricesUnlocked ? (
+            <>
+              <div className="line">
+                <span>Επιλεγμένες υπηρεσίες</span>
+                <strong>{selectedServices.length}</strong>
+              </div>
 
-            <input
-              value={unlockEmail}
-              onChange={(e) => setUnlockEmail(e.target.value)}
-              type="email"
-              name="Unlock email"
-              placeholder="Email"
-              required
-            />
+              {hasOrchestra && (
+                <div className="line">
+                  <span>Setup ορχήστρας</span>
+                  <strong>{orchestraPrice}€</strong>
+                </div>
+              )}
 
-            <button type="submit" className="darkBtn full" disabled={isUnlocking}>
-              {isUnlocking ? "ΓΙΝΕΤΑΙ ΣΥΝΔΕΣΗ..." : "ΔΕΙΤΕ ΤΙΣ ΤΙΜΕΣ"}
-            </button>
+              <div className="fountainBox">
+                <div>
+                  <strong>Επιδαπέδια Συντριβάνια</strong>
+                  <p>2 τεμ. = 80€ / από 4 και πάνω 35€ το τεμάχιο</p>
+                </div>
 
-            <p className="unlockSmall">
-              Τα στοιχεία χρησιμοποιούνται μόνο για επικοινωνία σχετικά με τις υπηρεσίες της Kalogirou Team.
-            </p>
-          </form>
-        )}
+                <div className="counter">
+                  <button type="button" onClick={() => changeFountains("down")}>−</button>
+                  <span>{fountains}</span>
+                  <button type="button" onClick={() => changeFountains("up")}>+</button>
+                </div>
+
+                <div className="fountainPrice">
+                  <span>Τιμή συντριβανιών</span>
+                  <strong>{fountainsPrice}€</strong>
+                </div>
+              </div>
+
+              <div className="total">
+                <span>Σύνολο</span>
+                <strong>{totalPrice}€</strong>
+              </div>
+
+              <button type="button" onClick={scrollToBooking} className="darkBtn full">
+                ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΚΡΑΤΗΣΗ
+              </button>
+            </>
+          ) : (
+            <form onSubmit={handleUnlockPrices} className="unlockBox">
+              <p className="unlockTitle">Ξεκλείδωμα ενδεικτικών τιμών</p>
+              <p className="unlockText">
+                Συμπληρώστε ονοματεπώνυμο και email για να εμφανιστούν οι υπηρεσίες με τις ενδεικτικές τιμές.
+              </p>
+
+              <input
+                value={unlockName}
+                onChange={(e) => setUnlockName(e.target.value)}
+                name="Unlock name"
+                placeholder="Ονοματεπώνυμο"
+                required
+              />
+
+              <input
+                value={unlockEmail}
+                onChange={(e) => setUnlockEmail(e.target.value)}
+                type="email"
+                name="Unlock email"
+                placeholder="Email"
+                required
+              />
+
+              <button type="submit" className="darkBtn full" disabled={isUnlocking}>
+                {isUnlocking ? "ΓΙΝΕΤΑΙ ΣΥΝΔΕΣΗ..." : "ΔΕΙΤΕ ΤΙΣ ΤΙΜΕΣ"}
+              </button>
+
+              <p className="unlockSmall">
+                Τα στοιχεία χρησιμοποιούνται μόνο για επικοινωνία σχετικά με τις υπηρεσίες της Kalogirou Team.
+              </p>
+            </form>
+          )}
+        </div>
       </section>
 
       <section id="booking" className="booking">
@@ -462,7 +718,7 @@ export default function Home() {
             έχουν ήδη εκκρεμές αίτημα.
           </p>
           <p className="priceNote">
-            Τα προαιρετικά στοιχεία βοηθούν να σας προτείνουμε πιο σωστή και οικονομική προσφορά.
+            Τα στοιχεία της εκδήλωσης που επιλέξατε πιο πάνω θα σταλούν μαζί με το αίτημα.
           </p>
         </div>
 
@@ -489,43 +745,14 @@ export default function Home() {
 
           <input name="Location" placeholder="Περιοχή / Τοποθεσία εκδήλωσης" required />
 
-          <select name="Event type" required defaultValue="">
-            <option value="" disabled>Τύπος εκδήλωσης</option>
-            <option>Γάμος</option>
-            <option>Βάπτιση</option>
-            <option>Party</option>
-            <option>Corporate Event</option>
-            <option>Live Event</option>
-            <option>Πανηγύρι</option>
-            <option>Άλλο</option>
-          </select>
-
-          <input name="Guests" placeholder="Αριθμός καλεσμένων (προαιρετικό)" />
-
-          <select name="Venue" defaultValue="">
-            <option value="">Χώρος εκδήλωσης (προαιρετικό)</option>
-            <option>Εσωτερικός χώρος</option>
-            <option>Εξωτερικός χώρος</option>
-            <option>Και τα δύο</option>
-            <option>Δεν γνωρίζω ακόμα</option>
-          </select>
-
-          <select name="Budget" defaultValue="">
-            <option value="">Τι προσφορά ψάχνετε; (προαιρετικό)</option>
-            <option>Θέλω κάτι πιο οικονομικό</option>
-            <option>Θέλω ισορροπία τιμής και ποιότητας</option>
-            <option>Θέλω premium setup</option>
-            <option>Δεν γνωρίζω, θέλω πρόταση</option>
-          </select>
-
           <textarea
             name="Notes"
-            placeholder="Προαιρετικά: γράψτε πληροφορίες που βοηθούν για καλύτερη και οικονομικότερη προσφορά. Π.χ. αριθμός ατόμων, μέγεθος χώρου, αν θέλετε κάτι πιο απλό ή πιο premium, ειδικές απαιτήσεις."
+            placeholder="Προαιρετικά: γράψτε επιπλέον πληροφορίες για την εκδήλωση, ειδικές απαιτήσεις ή κάτι που θέλετε να γνωρίζουμε."
             rows={6}
           />
 
           <p className="helpText">
-            Αυτά τα πεδία είναι προαιρετικά, αλλά βοηθούν να σας προτείνουμε την καλύτερη και πιο οικονομική λύση.
+            Η τελική τιμή επιβεβαιώνεται μετά την επικοινωνία και τις λεπτομέρειες της εκδήλωσης.
           </p>
 
           <div className="bookingTotal">
@@ -544,6 +771,46 @@ export default function Home() {
         <span>DJ • Sound • Lighting • Events</span>
         <span>Τηλ. {PHONE}</span>
       </footer>
+
+      {activeStory && (
+  <div
+    className="storyModal"
+    onTouchStart={(e) => setTouchStartY(e.touches[0].clientY)}
+    onTouchEnd={handleStoryTouchEnd}
+  >
+    <video
+      key={activeStory.videos[activeVideoIndex]}
+      ref={videoRef}
+      className="storyVideo"
+      autoPlay
+      playsInline
+      preload="auto"
+      onEnded={nextStoryVideo}
+    >
+      <source src={activeStory.videos[activeVideoIndex]} type="video/mp4" />
+    </video>
+
+    <div className="storyOverlay">
+      <div className="storyProgress">
+        {activeStory.videos.map((_, index) => (
+          <span key={index} className={index <= activeVideoIndex ? "progressPart active" : "progressPart"} />
+        ))}
+      </div>
+
+      <div className="storyHeader">
+        <span>{activeStory.icon}</span>
+        <strong>{activeStory.title}</strong>
+
+        <button type="button" className="storyClose" onClick={closeStory}>
+          ×
+        </button>
+      </div>
+    </div>
+
+    <button type="button" className="storyTap left" onClick={previousStoryVideo} />
+    <button type="button" className="storyTap right" onClick={nextStoryVideo} />
+  </div>
+)}
 
       <Styles />
     </main>
@@ -567,7 +834,6 @@ function Styles() {
 
       button,
       input,
-      select,
       textarea {
         font-family: inherit;
       }
@@ -598,6 +864,10 @@ function Styles() {
       }
 
       .logo {
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
         font-weight: 900;
         letter-spacing: 2px;
         font-size: 15px;
@@ -652,7 +922,8 @@ function Styles() {
       .hero p,
       .pricing p,
       .booking p,
-      .galleryText p {
+      .calculatorIntro p,
+      .storiesIntro p {
         font-size: 18px;
         line-height: 1.7;
         color: rgb(102, 102, 102);
@@ -747,20 +1018,125 @@ function Styles() {
         font-size: 14px;
       }
 
-      .section,
-      .pricing,
-      .booking {
-        padding: 90px 7vw;
+      .storiesSection {
+        padding: 70px 7vw 80px;
+        background: rgb(250, 248, 243);
+        text-align: center;
       }
 
+      .storiesIntro {
+        max-width: 780px;
+        margin: 0 auto 34px;
+      }
+
+      .storiesIntro h2,
       .section h2,
       .pricing h2,
       .booking h2,
-      .galleryText h2 {
+      .calculator h2 {
         font-size: clamp(34px, 5vw, 62px);
         letter-spacing: -2px;
         line-height: 1.05;
-        margin: 0 0 30px;
+        margin: 0 0 22px;
+      }
+
+      .storyCircles {
+        display: flex;
+        justify-content: center;
+        gap: 28px;
+        flex-wrap: wrap;
+      }
+
+      .storyCircleBtn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+        color: rgb(23, 23, 23);
+        font-weight: 900;
+      }
+
+      .storyRing {
+        width: 94px;
+        height: 94px;
+        border-radius: 50%;
+        padding: 4px;
+        background: linear-gradient(135deg, rgb(255, 242, 0), rgb(167, 122, 45), rgb(23, 23, 23));
+        display: grid;
+        place-items: center;
+        box-shadow: 0 16px 35px rgba(0,0,0,0.16);
+      }
+
+      .storyIcon {
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        background: rgb(23, 23, 23);
+        color: rgb(255, 242, 0);
+        display: grid;
+        place-items: center;
+        font-size: 34px;
+        border: 3px solid rgb(250, 248, 243);
+      }
+
+      .section,
+      .pricing,
+      .booking,
+      .calculator {
+        padding: 90px 7vw;
+      }
+
+      .calculator {
+        background: white;
+      }
+
+      .calculatorIntro {
+        max-width: 780px;
+        margin-bottom: 34px;
+      }
+
+      .calculatorPanel {
+        background: rgb(250, 248, 243);
+        border: 1px solid rgb(238, 238, 238);
+        border-radius: 34px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+        display: grid;
+        gap: 26px;
+      }
+
+      .optionGroup h3 {
+        margin: 0 0 14px;
+        font-size: 20px;
+      }
+
+      .optionGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+
+      .optionGrid.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .optionBtn {
+        border: 1px solid rgb(221, 221, 221);
+        background: white;
+        color: rgb(23, 23, 23);
+        padding: 15px 16px;
+        border-radius: 18px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .optionBtn.active {
+        background: rgb(23, 23, 23);
+        color: white;
+        border-color: rgb(23, 23, 23);
       }
 
       .servicesGrid {
@@ -809,61 +1185,7 @@ function Styles() {
         color: rgb(167, 122, 45);
         font-weight: 900;
         font-size: 15px;
-      }
-
-      .gallery {
-        padding: 40px 7vw 100px;
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 22px;
-      }
-
-      .galleryImage {
-        min-height: 460px;
-        border-radius: 34px;
-        background-size: cover;
-        background-position: center;
-      }
-
-      .galleryImage.one {
-        background-image: url('/details-bg.jpg');
-      }
-
-      .galleryImage.two {
-        background-image: url('/dj-console.jpg');
-      }
-
-      .galleryText {
-        background: rgb(23, 23, 23);
-        color: white;
-        border-radius: 34px;
-        padding: 36px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
-
-      .galleryText p {
-        color: rgb(213, 213, 213);
-      }
-
-      .eventList {
-        list-style: none;
-        padding: 0;
-        margin: 0 auto 22px;
-        color: white;
-        font-size: 32px;
-        line-height: 1.45;
-        font-weight: 500;
-        text-align: center;
-      }
-
-      .eventList li {
-        margin-bottom: 12px;
-      }
-
-      .eventList li::before {
-        content: "- ";
+        cursor: pointer;
       }
 
       .pricing {
@@ -889,6 +1211,17 @@ function Styles() {
         border-radius: 34px;
         padding: 30px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+      }
+
+      .summaryBox {
+        display: grid;
+        gap: 8px;
+        padding: 16px;
+        border-radius: 20px;
+        background: white;
+        margin-bottom: 18px;
+        font-weight: 900;
+        color: rgb(85, 85, 85);
       }
 
       .unlockBox {
@@ -1006,7 +1339,6 @@ function Styles() {
       }
 
       .form input,
-      .form select,
       .form textarea {
         width: 100%;
         padding: 17px 18px;
@@ -1061,6 +1393,94 @@ function Styles() {
         flex-wrap: wrap;
       }
 
+      .storyModal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: black;
+  z-index: 9999;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.storyVideo {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  object-fit: contain;
+  background: black;
+  display: block;
+}
+
+.storyOverlay {
+  position: absolute;
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 14px;
+  color: white;
+}
+
+.storyProgress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.progressPart {
+  height: 4px;
+  flex: 1;
+  background: rgba(255,255,255,0.25);
+  border-radius: 999px;
+}
+
+.progressPart.active {
+  background: white;
+}
+
+.storyHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+}
+
+.storyClose {
+  margin-left: auto;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.storyTap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 4;
+}
+
+.storyTap.left {
+  left: 0;
+}
+
+.storyTap.right {
+  right: 0;
+}
+
       .successPage {
         min-height: 100vh;
         display: grid;
@@ -1091,6 +1511,10 @@ function Styles() {
       }
 
       @media (max-width: 900px) {
+         
+        .storyClose {
+        display: none;
+        }
         .nav {
           height: 66px;
           padding: 0 18px;
@@ -1125,7 +1549,8 @@ function Styles() {
         .hero p,
         .pricing p,
         .booking p,
-        .galleryText p {
+        .calculatorIntro p,
+        .storiesIntro p {
           font-size: 16px;
         }
 
@@ -1164,16 +1589,34 @@ function Styles() {
 
         .section,
         .pricing,
-        .booking {
+        .booking,
+        .calculator,
+        .storiesSection {
           padding: 66px 18px;
         }
 
+        .storiesIntro h2,
         .section h2,
         .pricing h2,
         .booking h2,
-        .galleryText h2 {
+        .calculator h2 {
           font-size: 38px;
           letter-spacing: -1.5px;
+        }
+
+        .storyCircles {
+          gap: 18px;
+        }
+
+        .storyRing {
+          width: 82px;
+          height: 82px;
+        }
+
+        .storyIcon {
+          width: 70px;
+          height: 70px;
+          font-size: 28px;
         }
 
         .servicesGrid {
@@ -1186,31 +1629,13 @@ function Styles() {
           padding: 24px;
         }
 
-        .gallery {
-          padding: 20px 18px 66px;
-          grid-template-columns: 1fr;
-        }
-
-        .galleryImage {
-          min-height: 330px;
-          border-radius: 28px;
-        }
-
-        .galleryText {
-          border-radius: 28px;
-          padding: 28px;
-        }
-
-        .eventList {
-          font-size: 28px;
-        }
-
         .pricing {
           grid-template-columns: 1fr;
           gap: 28px;
         }
 
         .pricePanel,
+        .calculatorPanel,
         .unlockBox {
           padding: 22px;
           border-radius: 28px;
@@ -1250,10 +1675,11 @@ function Styles() {
           font-size: 42px;
         }
 
+        .storiesIntro h2,
         .section h2,
         .pricing h2,
         .booking h2,
-        .galleryText h2 {
+        .calculator h2 {
           font-size: 34px;
         }
 
@@ -1262,8 +1688,29 @@ function Styles() {
           min-height: 360px;
         }
 
-        .eventList {
+        .storyCircles {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+        }
+
+        .storyRing {
+          width: 70px;
+          height: 70px;
+        }
+
+        .storyIcon {
+          width: 60px;
+          height: 60px;
           font-size: 24px;
+        }
+
+        .storyCircleBtn strong {
+          font-size: 12px;
+        }
+
+        .storyHeader small {
+          display: none;
         }
       }
     `}</style>
